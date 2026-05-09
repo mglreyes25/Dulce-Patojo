@@ -33,7 +33,7 @@ const obtenerProductos = async (req, res) => {
   try {
     const { nombre, categoria_id, disponible } = req.query;
     let query = supabase.from('productos').select('*, categorias(nombre)').order('nombre');
-    if (nombre) query = query.ilike('nombre', `%${nombre}%`);
+    if (nombre)     query = query.ilike('nombre', `%${nombre}%`);
     if (categoria_id) query = query.eq('categoria_id', categoria_id);
     if (disponible !== undefined) query = query.eq('disponible', disponible === 'true');
     const { data, error } = await query;
@@ -56,7 +56,7 @@ const obtenerProductoPorId = async (req, res) => {
 };
 
 const crearProducto = async (req, res) => {
-  const { nombre, descripcion, precio, categoria_id } = req.body;
+  const { nombre, descripcion, precio, categoria_id, imagen_url } = req.body;
   if (!nombre || !precio || !categoria_id)
     return res.status(400).json({ error: 'Nombre, precio y categoría son obligatorios' });
   if (precio <= 0)
@@ -64,7 +64,7 @@ const crearProducto = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('productos')
-      .insert({ nombre, descripcion, precio, categoria_id })
+      .insert({ nombre, descripcion, precio, categoria_id, imagen_url: imagen_url || null })
       .select('*, categorias(nombre)').single();
     if (error) throw error;
 
@@ -82,8 +82,9 @@ const crearProducto = async (req, res) => {
 
 const actualizarProducto = async (req, res) => {
   const { id } = req.params;
-  const { nombre, descripcion, precio, categoria_id, disponible } = req.body;
+  const { nombre, descripcion, precio, categoria_id, disponible, imagen_url } = req.body;
   try {
+    // Registrar historial de precio si cambió
     if (precio !== undefined) {
       const { data: actual } = await supabase.from('productos').select('precio').eq('id', id).single();
       if (actual && Number(actual.precio) !== Number(precio)) {
@@ -97,11 +98,13 @@ const actualizarProducto = async (req, res) => {
     }
 
     const updates = {};
-    if (nombre !== undefined) updates.nombre = nombre;
+    if (nombre      !== undefined) updates.nombre      = nombre;
     if (descripcion !== undefined) updates.descripcion = descripcion;
-    if (precio !== undefined) updates.precio = precio;
+    if (precio      !== undefined) updates.precio      = precio;
     if (categoria_id !== undefined) updates.categoria_id = categoria_id;
-    if (disponible !== undefined) updates.disponible = disponible;
+    if (disponible  !== undefined) updates.disponible  = disponible;
+    // imagen_url puede llegar como null (quitar imagen) o como URL válida
+    if ('imagen_url' in req.body) updates.imagen_url = imagen_url || null;
     updates.actualizado_en = new Date().toISOString();
 
     const { data, error } = await supabase
@@ -182,7 +185,7 @@ const obtenerCombos = async (req, res) => {
 };
 
 const crearCombo = async (req, res) => {
-  const { nombre, descripcion, precio, productos } = req.body;
+  const { nombre, descripcion, precio, productos, imagen_url } = req.body;
   if (!nombre || !precio || !productos || productos.length < 2)
     return res.status(400).json({ error: 'Nombre, precio y al menos 2 productos son obligatorios' });
 
@@ -193,10 +196,14 @@ const crearCombo = async (req, res) => {
       if (data) sumaProductos += Number(data.precio) * (p.cantidad || 1);
     }
     if (Number(precio) >= sumaProductos)
-      return res.status(400).json({ error: `El precio del combo ($${precio}) debe ser menor a la suma de productos ($${sumaProductos.toFixed(2)})` });
+      return res.status(400).json({
+        error: `El precio del combo ($${precio}) debe ser menor a la suma de productos ($${sumaProductos.toFixed(2)})`
+      });
 
     const { data: combo, error } = await supabase
-      .from('combos').insert({ nombre, descripcion, precio }).select().single();
+      .from('combos')
+      .insert({ nombre, descripcion, precio, imagen_url: imagen_url || null })
+      .select().single();
     if (error) throw error;
 
     await supabase.from('combo_productos').insert(
@@ -218,12 +225,13 @@ const crearCombo = async (req, res) => {
 
 const actualizarCombo = async (req, res) => {
   const { id } = req.params;
-  const { nombre, descripcion, precio, productos } = req.body;
+  const { nombre, descripcion, precio, productos, imagen_url } = req.body;
   try {
     const updates = {};
-    if (nombre) updates.nombre = nombre;
+    if (nombre)       updates.nombre      = nombre;
     if (descripcion !== undefined) updates.descripcion = descripcion;
-    if (precio) updates.precio = precio;
+    if (precio)       updates.precio      = precio;
+    if ('imagen_url' in req.body) updates.imagen_url = imagen_url || null;
     updates.actualizado_en = new Date().toISOString();
 
     const { data, error } = await supabase
