@@ -1,34 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 
-const API = 'http://localhost:5000';
-const rolColor = (rol) => ({ Admin:'warning', Cajero:'primary', Cocinero:'purple', Despachador:'success' }[rol] || 'primary');
+import Sidebar from '../components/Sidebar';
 
-function Sidebar({ usuario, onLogout }) {
-  return (
-    <aside className="sidebar">
-      <div className="sidebar-logo"><h1>Dulce Patojo</h1><p>Sistema POS</p></div>
-      <nav>
-        <ul>
-          <li><Link to="/dashboard">📊 Dashboard</Link></li>
-          {usuario.rol === 'Admin' && <li><Link to="/usuarios">👥 Usuarios</Link></li>}
-          <li><Link to="/productos" className="active">🍔 Productos</Link></li>
-          <li><a href="#pedidos">📦 Pedidos</a></li>
-          <li><a href="#reportes">📈 Reportes</a></li>
-        </ul>
-      </nav>
-      <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <span className="sidebar-user-name">{usuario.nombre}</span>
-          <span className={`badge badge-${rolColor(usuario.rol)}`}>{usuario.rol}</span>
-        </div>
-        <button className="btn-logout" onClick={onLogout}>🚪 Cerrar Sesión</button>
-      </div>
-    </aside>
-  );
-}
+const API = 'http://localhost:5000';
 
 export default function Productos() {
   const [tab, setTab] = useState('productos');
@@ -193,11 +170,11 @@ export default function Productos() {
     } catch { setError('Error al cambiar estado'); }
   };
 
-  const logout = () => { localStorage.clear(); navigate('/login'); };
+
 
   return (
     <div className="dashboard-page">
-      <Sidebar usuario={usuario} onLogout={logout} />
+      <Sidebar usuario={usuario} activeRoute="productos" />
 
       <main className="main-content">
         <div className="page-header">
