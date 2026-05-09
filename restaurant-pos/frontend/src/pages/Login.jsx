@@ -1,0 +1,172 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000';
+
+const redirigirPorRol = (rol, navigate) => {
+  switch (rol) {
+    case 'Admin':       return navigate('/dashboard');
+    case 'Cajero':      return navigate('/caja');
+    case 'Cocinero':    return navigate('/cocina');
+    case 'Despachador': return navigate('/despacho');
+    default:            return navigate('/dashboard');
+  }
+};
+
+function Login() {
+  const [modo, setModo] = useState('login'); // 'login' | 'registro'
+  const [form, setForm] = useState({ nombre: '', correo: '', password: '', confirmar: '', rol: 'Cajero' });
+  const [error, setError]   = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/auth/login`, {
+        correo: form.correo, password: form.password
+      });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('usuario', JSON.stringify(res.data.usuario));
+      localStorage.setItem('lastActivity', Date.now().toString());
+      redirigirPorRol(res.data.usuario.rol, navigate);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegistro = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (form.password !== form.confirmar)
+      return setError('Las contraseñas no coinciden');
+    if (form.password.length < 6)
+      return setError('La contraseña debe tener al menos 6 caracteres');
+    setLoading(true);
+    try {
+      // El registro lo hace el admin, pero aquí es autoregistro con rol Cajero por defecto
+      // Necesita un admin token — si no hay admin aún, crear primer usuario
+      await axios.post(`${API_URL}/auth/registro-publico`, {
+        nombre: form.nombre,
+        correo: form.correo,
+        password: form.password,
+        rol: form.rol
+      });
+      setSuccess('¡Cuenta creada! Espera que un administrador active tu acceso.');
+      setModo('login');
+      setForm({ nombre: '', correo: '', password: '', confirmar: '', rol: 'Cajero' });
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Error al registrar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-left">
+        <div className="auth-left-content">
+          <div className="auth-brand">
+            <span>Sistema POS</span>
+            Dulce Patojo
+          </div>
+          <p className="auth-tagline">
+            Gestiona tu restaurante con elegancia. Control total de pedidos, usuarios y operaciones en un solo lugar.
+          </p>
+        </div>
+      </div>
+
+      <div className="auth-right">
+        <div className="auth-container">
+          <div className="auth-tabs">
+            <button
+              className={`auth-tab ${modo === 'login' ? 'active' : ''}`}
+              onClick={() => { setModo('login'); setError(''); setSuccess(''); }}
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              className={`auth-tab ${modo === 'registro' ? 'active' : ''}`}
+              onClick={() => { setModo('registro'); setError(''); setSuccess(''); }}
+            >
+              Registrarse
+            </button>
+          </div>
+
+          {error   && <div className="message error-message">{error}</div>}
+          {success && <div className="message success-message">{success}</div>}
+
+          {modo === 'login' ? (
+            <>
+              <p className="subtitle">Ingresa tus credenciales para continuar</p>
+              <form onSubmit={handleLogin} className="auth-form">
+                <div className="form-group">
+                  <label>Correo Electrónico</label>
+                  <input type="email" value={form.correo} onChange={set('correo')}
+                    placeholder="correo@ejemplo.com" disabled={loading} required />
+                </div>
+                <div className="form-group">
+                  <label>Contraseña</label>
+                  <input type="password" value={form.password} onChange={set('password')}
+                    placeholder="••••••••" disabled={loading} required />
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: '8px' }}>
+                  {loading ? 'Iniciando sesión...' : 'Iniciar Sesión →'}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="subtitle">Crea tu cuenta para acceder al sistema</p>
+              <form onSubmit={handleRegistro} className="auth-form">
+                <div className="form-group">
+                  <label>Nombre Completo</label>
+                  <input type="text" value={form.nombre} onChange={set('nombre')}
+                    placeholder="Tu nombre" disabled={loading} required />
+                </div>
+                <div className="form-group">
+                  <label>Correo Electrónico</label>
+                  <input type="email" value={form.correo} onChange={set('correo')}
+                    placeholder="correo@ejemplo.com" disabled={loading} required />
+                </div>
+                <div className="form-group">
+                  <label>Contraseña</label>
+                  <input type="password" value={form.password} onChange={set('password')}
+                    placeholder="Mínimo 6 caracteres" disabled={loading} required />
+                </div>
+                <div className="form-group">
+                  <label>Confirmar Contraseña</label>
+                  <input type="password" value={form.confirmar} onChange={set('confirmar')}
+                    placeholder="Repite tu contraseña" disabled={loading} required />
+                </div>
+                <div className="form-group">
+                  <label>Rol Solicitado</label>
+                  <select value={form.rol} onChange={set('rol')} disabled={loading}>
+                    <option>Cajero</option>
+                    <option>Cocinero</option>
+                    <option>Despachador</option>
+                  </select>
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={loading} style={{ marginTop: '8px' }}>
+                  {loading ? 'Registrando...' : 'Crear Cuenta →'}
+                </button>
+              </form>
+              <p className="auth-note">
+                Tu cuenta quedará inactiva hasta que un administrador la apruebe.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Login;
