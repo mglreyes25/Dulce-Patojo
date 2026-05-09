@@ -84,7 +84,6 @@ const actualizarProducto = async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion, precio, categoria_id, disponible, imagen_url } = req.body;
   try {
-    // Registrar historial de precio si cambió
     if (precio !== undefined) {
       const { data: actual } = await supabase.from('productos').select('precio').eq('id', id).single();
       if (actual && Number(actual.precio) !== Number(precio)) {
@@ -98,13 +97,12 @@ const actualizarProducto = async (req, res) => {
     }
 
     const updates = {};
-    if (nombre      !== undefined) updates.nombre      = nombre;
-    if (descripcion !== undefined) updates.descripcion = descripcion;
-    if (precio      !== undefined) updates.precio      = precio;
+    if (nombre       !== undefined) updates.nombre       = nombre;
+    if (descripcion  !== undefined) updates.descripcion  = descripcion;
+    if (precio       !== undefined) updates.precio       = precio;
     if (categoria_id !== undefined) updates.categoria_id = categoria_id;
-    if (disponible  !== undefined) updates.disponible  = disponible;
-    // imagen_url puede llegar como null (quitar imagen) o como URL válida
-    if ('imagen_url' in req.body) updates.imagen_url = imagen_url || null;
+    if (disponible   !== undefined) updates.disponible   = disponible;
+    if ('imagen_url' in req.body)   updates.imagen_url   = imagen_url || null;
     updates.actualizado_en = new Date().toISOString();
 
     const { data, error } = await supabase
@@ -161,6 +159,129 @@ const obtenerHistorialPrecios = async (req, res) => {
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener historial' });
+  }
+};
+
+// ── ACTUALIZACIÓN MASIVA DE PRECIOS POR CATEGORÍA ────────────────
+const actualizarPreciosMasivo = async (req, res) => {
+  const { categoria_id, porcentaje, precio_fijo } = req.body;
+
+  if (!categoria_id)
+    return res.status(400).json({ error: 'Categoría requerida' });
+  if (porcentaje === undefined && precio_fijo === undefined)
+    return res.status(400).json({ error: 'Debes indicar porcentaje o precio fijo' });
+  if (precio_fijo !== undefined && Number(precio_fijo) <= 0)
+    return res.status(400).json({ error: 'El precio debe ser mayor a $0' });
+
+  try {
+    // Obtener todos los productos de la categoría
+    const { data: productos, error: prodError } = await supabase
+      .from('productos')
+      .select('id, nombre, precio')
+      .eq('categoria_id', categoria_id);
+
+    if (prodError) throw prodError;
+    if (!productos || productos.length === 0)
+      return res.status(404).json({ error: 'No hay productos en esa categoría' });
+
+    const historial = [];
+    const ahora = new Date().toISOString();
+
+    for (const prod of productos) {
+      let nuevoPrecio;
+      if (precio_fijo !== undefined) {
+        nuevoPrecio = Number(precio_fijo);
+      } else {
+        // porcentaje puede ser positivo (aumento) o negativo (descuento)
+        nuevoPrecio = Number((prod.precio * (1 + Number(porcentaje) / 100)).toFixed(2));
+      }
+
+      if (nuevoPrecio <= 0) continue; // saltar si queda en 0 o negativo
+
+      // Actualizar precio
+      await supabase.from('productos')
+        .update({ precio: nuevoPrecio, actualizado_en: ahora })
+        .eq('id', prod.id);
+
+      // Registrar en historial
+      historial.push({
+        producto_id: prod.id,
+        precio_anterior: prod.precio,
+        precio_nuevo: nuevoPrecio,
+        usuario_id: req.user.id
+      });
+    }
+
+    if (historial.length > 0) {
+      await supabase.from('historial_precios').insert(historial);
+    }
+
+    await supabase.from('bitacora_permisos').insert({
+      usuario_id: req.user.id,
+      accion: 'ACTUALIZAR_PRECIOS_MASIVO',
+      descripcion: `Actualización masiva de ${historial.length} producto(s) en categoría ID ${categoria_id}`
+    });
+
+    res.json({
+      message: `${historial.length} producto(s) actualizados exitosamente`,
+      actualizados: historial.length
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al actualizar precios' });
+  }
+};
+
+// ── REVERTIR ÚLTIMO CAMBIO DE PRECIO DE UN PRODUCTO ──────────────
+const revertirUltimoPrecio = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Obtener el último cambio en el historial
+    const { data: ultimo, error: histError } = await supabase
+      .from('historial_precios')
+      .select('*')
+      .eq('producto_id', id)
+      .order('creado_en', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (histError || !ultimo)
+      return res.status(404).json({ error: 'No hay cambios de precio para revertir' });
+
+    // Restaurar el precio anterior
+    const { data: producto, error: updateError } = await supabase
+      .from('productos')
+      .update({ precio: ultimo.precio_anterior, actualizado_en: new Date().toISOString() })
+      .eq('id', id)
+      .select('*, categorias(nombre)')
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Registrar la reversión en el historial
+    await supabase.from('historial_precios').insert({
+      producto_id: id,
+      precio_anterior: ultimo.precio_nuevo,
+      precio_nuevo: ultimo.precio_anterior,
+      usuario_id: req.user.id
+    });
+
+    // Eliminar el registro revertido
+    await supabase.from('historial_precios').delete().eq('id', ultimo.id);
+
+    await supabase.from('bitacora_permisos').insert({
+      usuario_id: req.user.id,
+      accion: 'REVERTIR_PRECIO',
+      descripcion: `Precio de producto ID ${id} revertido de $${ultimo.precio_nuevo} a $${ultimo.precio_anterior}`
+    });
+
+    res.json({
+      message: `Precio revertido de $${ultimo.precio_nuevo} a $${ultimo.precio_anterior}`,
+      producto
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error al revertir precio' });
   }
 };
 
@@ -269,5 +390,6 @@ module.exports = {
   obtenerCategorias, crearCategoria,
   obtenerProductos, obtenerProductoPorId, crearProducto, actualizarProducto,
   toggleDisponible, obtenerHistorialPrecios,
+  actualizarPreciosMasivo, revertirUltimoPrecio,
   obtenerCombos, crearCombo, actualizarCombo, toggleCombo
 };

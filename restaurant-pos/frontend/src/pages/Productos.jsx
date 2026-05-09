@@ -139,6 +139,13 @@ export default function Productos() {
   const [showHistorial, setShowHistorial] = useState(null);
   const [historial, setHistorial]         = useState([]);
 
+  // Modal precios masivos
+  const [showPreciosModal, setShowPreciosModal] = useState(false);
+  const [preciosForm, setPreciosForm] = useState({ categoria_id: '', tipo: 'porcentaje', valor: '' });
+  const [preciosMensaje, setPreciosMensaje] = useState('');
+  const [aplicandoPrecios, setAplicandoPrecios] = useState(false);
+
+
   const navigate = useNavigate();
   const usuario  = JSON.parse(localStorage.getItem('usuario') || '{}');
   const token    = localStorage.getItem('token');
@@ -237,6 +244,53 @@ export default function Productos() {
     } catch { setHistorial([]); }
   };
 
+  /* ── Precios masivos ── */
+  const abrirPreciosMasivos = () => {
+    setPreciosForm({ categoria_id: '', tipo: 'porcentaje', valor: '' });
+    setPreciosMensaje('');
+    setError('');
+    setShowPreciosModal(true);
+  };
+
+  const aplicarPreciosMasivos = async () => {
+    if (!preciosForm.categoria_id || !preciosForm.valor)
+      return setError('Selecciona una categoría e ingresa un valor');
+    if (Number(preciosForm.valor) === 0)
+      return setError('El valor no puede ser 0');
+    if (preciosForm.tipo === 'fijo' && Number(preciosForm.valor) <= 0)
+      return setError('El precio fijo debe ser mayor a $0');
+
+    setAplicandoPrecios(true);
+    setError('');
+    try {
+      const payload = { categoria_id: preciosForm.categoria_id };
+      if (preciosForm.tipo === 'porcentaje') {
+        payload.porcentaje = Number(preciosForm.valor);
+      } else {
+        payload.precio_fijo = Number(preciosForm.valor);
+      }
+      const res = await axios.post(`${API}/productos/precios/masivo`, payload, { headers });
+      setPreciosMensaje(res.data.message);
+      cargarTodo();
+    } catch (e) {
+      setError(e.response?.data?.error || 'Error al actualizar precios');
+    } finally {
+      setAplicandoPrecios(false);
+    }
+  };
+
+  const revertirPrecio = async (producto) => {
+    try {
+      const res = await axios.post(`${API}/productos/${producto.id}/revertir-precio`, {}, { headers });
+      alert(res.data.message);
+      verHistorial(producto);
+      cargarTodo();
+    } catch (e) {
+      alert(e.response?.data?.error || 'No hay cambio de precio para revertir');
+    }
+  };
+
+
   /* ── Acciones Combo ── */
   const abrirCrearCombo = () => {
     setEditandoCombo(null);
@@ -317,9 +371,20 @@ export default function Productos() {
             </p>
           </div>
           {usuario.rol === 'Admin' && (
-            <button className="btn btn-primary" onClick={tab === 'productos' ? abrirCrear : abrirCrearCombo}>
-              + {tab === 'productos' ? 'Nuevo Producto' : 'Nuevo Combo'}
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {tab === 'productos' && (
+                <button
+                  className="btn"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+                  onClick={abrirPreciosMasivos}
+                >
+                  💲 Gestión de Precios
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={tab === 'productos' ? abrirCrear : abrirCrearCombo}>
+                + {tab === 'productos' ? 'Nuevo Producto' : 'Nuevo Combo'}
+              </button>
+            </div>
           )}
         </div>
 
@@ -433,6 +498,14 @@ export default function Productos() {
                               onClick={() => verHistorial(p)}
                             >
                               📋 Historial
+                            
+                            </button>
+                            <button
+                              className="btn-small"
+                              style={{ background: 'rgba(241,196,15,0.1)', color: '#f1c40f', border: '1px solid rgba(241,196,15,0.3)' }}
+                              onClick={() => revertirPrecio(p)}
+                            >
+                              ↩ Revertir
                             </button>
                           </td>
                         )}
@@ -728,6 +801,82 @@ export default function Productos() {
       )}
 
       {/* ════════════ MODAL HISTORIAL ════════════ */}
+      {/* ════════════ MODAL PRECIOS MASIVOS ════════════ */}
+      {showPreciosModal && (
+        <div className="modal-overlay" onClick={() => setShowPreciosModal(false)}>
+          <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+            <h3>💲 Gestión de Precios</h3>
+
+            {error && <div className="message error-message">{error}</div>}
+            {preciosMensaje && <div className="message success-message">✅ {preciosMensaje}</div>}
+
+            <div className="form-group">
+              <label>Categoría *</label>
+              <select value={preciosForm.categoria_id} onChange={e => setPreciosForm({ ...preciosForm, categoria_id: e.target.value })}>
+                <option value="">Seleccionar categoría...</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Tipo de Cambio</label>
+              <select value={preciosForm.tipo} onChange={e => setPreciosForm({ ...preciosForm, tipo: e.target.value, valor: '' })}>
+                <option value="porcentaje">Porcentaje (% aumento o descuento)</option>
+                <option value="fijo">Precio fijo para todos los productos</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>
+                {preciosForm.tipo === 'porcentaje'
+                  ? 'Porcentaje (usa negativo para descuento, ej: -10 = -10%)'
+                  : 'Nuevo Precio Fijo ($)'}
+              </label>
+              <input
+                type="number"
+                step={preciosForm.tipo === 'porcentaje' ? '1' : '0.01'}
+                value={preciosForm.valor}
+                onChange={e => setPreciosForm({ ...preciosForm, valor: e.target.value })}
+                placeholder={preciosForm.tipo === 'porcentaje' ? 'Ej: 10 o -5' : 'Ej: 5.99'}
+              />
+              {preciosForm.tipo === 'porcentaje' && preciosForm.valor && (
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  {Number(preciosForm.valor) > 0
+                    ? `↑ Aumento del ${preciosForm.valor}%`
+                    : `↓ Descuento del ${Math.abs(preciosForm.valor)}%`}
+                </p>
+              )}
+            </div>
+
+            {preciosForm.categoria_id && (
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                  Productos en esta categoría: <strong style={{ color: 'var(--text)' }}>
+                    {productos.filter(p => String(p.categoria_id) === preciosForm.categoria_id).length}
+                  </strong>
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <button
+                className="btn"
+                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={() => setShowPreciosModal(false)}
+              >Cerrar</button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={aplicarPreciosMasivos}
+                disabled={aplicandoPrecios}
+              >
+                {aplicandoPrecios ? 'Aplicando...' : '💲 Aplicar Cambio'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showHistorial && (
         <div className="modal-overlay" onClick={() => setShowHistorial(null)}>
           <div className="modal" onClick={e => e.stopPropagation()}>

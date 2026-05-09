@@ -34,6 +34,13 @@ export default function Caja() {
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
     cargarDatos();
+
+    // Auto-refresh cada 30 segundos para actualización automática del catálogo
+    const interval = setInterval(() => {
+      cargarDatos();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const cargarDatos = async () => {

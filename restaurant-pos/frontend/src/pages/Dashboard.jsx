@@ -71,16 +71,33 @@ function Dashboard() {
             <span className="acceso-icon">🍔</span>
             <span className="acceso-label">Productos</span>
           </Link>
-          <div className="acceso-card disabled">
-            <span className="acceso-icon">📦</span>
-            <span className="acceso-label">Pedidos</span>
-            <span className="acceso-soon">Sprint 3</span>
-          </div>
-          <div className="acceso-card disabled">
-            <span className="acceso-icon">📈</span>
-            <span className="acceso-label">Reportes</span>
-            <span className="acceso-soon">Sprint 5</span>
-          </div>
+          {['Admin', 'Cajero'].includes(usuario.rol) && (
+            <Link to="/caja" className="acceso-card">
+              <span className="acceso-icon">🧾</span>
+              <span className="acceso-label">Caja</span>
+            </Link>
+          )}
+          {['Admin', 'Cocinero'].includes(usuario.rol) && (
+            <div className="acceso-card disabled">
+              <span className="acceso-icon">👨‍🍳</span>
+              <span className="acceso-label">Cocina</span>
+              <span className="acceso-soon">Sprint 4</span>
+            </div>
+          )}
+          {['Admin', 'Despachador'].includes(usuario.rol) && (
+            <div className="acceso-card disabled">
+              <span className="acceso-icon">🚀</span>
+              <span className="acceso-label">Despacho</span>
+              <span className="acceso-soon">Sprint 4</span>
+            </div>
+          )}
+          {usuario.rol === 'Admin' && (
+            <div className="acceso-card disabled">
+              <span className="acceso-icon">📈</span>
+              <span className="acceso-label">Reportes</span>
+              <span className="acceso-soon">Sprint 5</span>
+            </div>
+          )}
         </div>
       </main>
     </div>

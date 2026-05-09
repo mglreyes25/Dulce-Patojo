@@ -8,14 +8,13 @@ const rolColor = (rol) =>
  * Sidebar reutilizable con hamburguesa y soporte responsive.
  * Props:
  *  - usuario: objeto con { nombre, rol }
- *  - activeRoute: 'dashboard' | 'usuarios' | 'productos' | ...
+ *  - activeRoute: 'dashboard' | 'usuarios' | 'productos' | 'caja' | ...
  */
 export default function Sidebar({ usuario, activeRoute }) {
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);   // desktop: colapsado o no
-  const [drawerOpen, setDrawerOpen] = useState(false); // mobile: drawer abierto
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Cerrar drawer al cambiar tamaño a desktop
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setDrawerOpen(false);
@@ -32,8 +31,23 @@ export default function Sidebar({ usuario, activeRoute }) {
       ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios', key: 'usuarios' }]
       : []),
     { to: '/productos', icon: '🍔', label: 'Productos', key: 'productos' },
-    { to: '#pedidos',   icon: '📦', label: 'Pedidos',   key: 'pedidos',  disabled: true },
-    { to: '#reportes',  icon: '📈', label: 'Reportes',  key: 'reportes', disabled: true },
+    // Promociones: visible para Admin y Cajero
+    ...(['Admin', 'Cajero'].includes(usuario?.rol)
+      ? [{ to: '/promociones', icon: '🎉', label: 'Promociones', key: 'promociones' }]
+      : []),
+    // Caja: visible para Admin y Cajero
+    ...(['Admin', 'Cajero'].includes(usuario?.rol)
+      ? [{ to: '/caja', icon: '🧾', label: 'Caja', key: 'caja' }]
+      : []),
+    // Cocina: visible para Admin y Cocinero
+    ...(['Admin', 'Cocinero'].includes(usuario?.rol)
+      ? [{ to: '/cocina', icon: '👨‍🍳', label: 'Cocina', key: 'cocina', disabled: true }]
+      : []),
+    // Despacho: visible para Admin y Despachador
+    ...(['Admin', 'Despachador'].includes(usuario?.rol)
+      ? [{ to: '/despacho', icon: '🚀', label: 'Despacho', key: 'despacho', disabled: true }]
+      : []),
+    { to: '#reportes', icon: '📈', label: 'Reportes', key: 'reportes', disabled: true },
   ];
 
   const SidebarContent = ({ onLinkClick }) => (
@@ -55,6 +69,7 @@ export default function Sidebar({ usuario, activeRoute }) {
                 <a href={item.to} className="nav-disabled" onClick={(e) => e.preventDefault()}>
                   <span className="nav-icon">{item.icon}</span>
                   {!collapsed && <span className="nav-label">{item.label}</span>}
+                  {!collapsed && <span className="nav-soon">Pronto</span>}
                 </a>
               ) : (
                 <Link
@@ -91,7 +106,7 @@ export default function Sidebar({ usuario, activeRoute }) {
 
   return (
     <>
-      {/* ── Botón hamburguesa flotante (móvil) ── */}
+      {/* Botón hamburguesa flotante (móvil) */}
       <button
         className="hamburger-btn hamburger-mobile"
         onClick={() => setDrawerOpen(true)}
@@ -100,7 +115,7 @@ export default function Sidebar({ usuario, activeRoute }) {
         <HamburgerIcon />
       </button>
 
-      {/* ── Drawer overlay (móvil) ── */}
+      {/* Drawer overlay (móvil) */}
       {drawerOpen && (
         <div className="sidebar-overlay" onClick={() => setDrawerOpen(false)}>
           <aside className="sidebar sidebar-drawer" onClick={(e) => e.stopPropagation()}>
@@ -118,7 +133,7 @@ export default function Sidebar({ usuario, activeRoute }) {
         </div>
       )}
 
-      {/* ── Sidebar desktop ── */}
+      {/* Sidebar desktop */}
       <aside className={`sidebar sidebar-desktop ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <button
           className="hamburger-btn hamburger-desktop"
@@ -144,6 +159,6 @@ const HamburgerIcon = () => (
 const CloseIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <line x1="4" y1="4" x2="16" y2="16" />
-    <line x1="16" y1="4" x2="4" y2="16" />
+    <line x1="16" y1="4" x2="4"  y2="16" />
   </svg>
 );

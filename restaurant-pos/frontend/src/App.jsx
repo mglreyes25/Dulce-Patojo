@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Usuarios  from './pages/Usuarios';
 import Productos from './pages/Productos';
 import Caja      from './pages/Caja';
+import Promociones from './pages/Promociones';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
       <Route path="/usuarios"  element={<Usuarios />} />
       <Route path="/productos" element={<Productos />} />
       <Route path="/caja"      element={<Caja />} />
+      <Route path="/promociones" element={<Promociones />} />
       <Route path="/cocina"    element={<Dashboard />} />
       <Route path="/despacho"  element={<Dashboard />} />
       <Route path="*"          element={<Navigate to="/login" replace />} />
