@@ -31,6 +31,10 @@ export default function Sidebar({ usuario, activeRoute }) {
       ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios', key: 'usuarios' }]
       : []),
     { to: '/productos', icon: '🍔', label: 'Productos', key: 'productos' },
+    // Inventario: visible solo para Admin
+    ...(usuario?.rol === 'Admin'
+      ? [{ to: '/inventario', icon: '📦', label: 'Inventario', key: 'inventario' }]
+      : []),
     // Promociones: visible para Admin y Cajero
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
       ? [{ to: '/promociones', icon: '🎉', label: 'Promociones', key: 'promociones' }]

@@ -77,6 +77,12 @@ function Dashboard() {
               <span className="acceso-label">Caja</span>
             </Link>
           )}
+          {usuario.rol === 'Admin' && (
+            <Link to="/inventario" className="acceso-card">
+              <span className="acceso-icon">📦</span>
+              <span className="acceso-label">Inventario</span>
+            </Link>
+          )}
           {['Admin', 'Cocinero'].includes(usuario.rol) && (
             <div className="acceso-card disabled">
               <span className="acceso-icon">👨‍🍳</span>

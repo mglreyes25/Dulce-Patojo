@@ -27,6 +27,11 @@ function Usuarios() {
   });
   const [guardando, setGuardando]   = useState(false);
 
+  // Inactivar modal
+  const [showInactivarModal, setShowInactivarModal] = useState(false);
+  const [inactivarTarget, setInactivarTarget]       = useState(null);
+  const [motivoInactivar, setMotivoInactivar]       = useState('');
+
   // Filtros
   const [busqueda, setBusqueda]         = useState('');
   const [filtroRol, setFiltroRol]       = useState('Todos');
@@ -97,6 +102,12 @@ function Usuarios() {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.correo)) {
+      setError('El formato del correo no es válido');
+      return;
+    }
+
     // Validar contraseña solo si se está ingresando una
     if (form.password) {
       const errPwd = validarPassword(form.password);
@@ -131,12 +142,33 @@ function Usuarios() {
   };
 
   const handleToggle = async (u) => {
+    if (u.activo) {
+      setInactivarTarget(u);
+      setMotivoInactivar('');
+      setShowInactivarModal(true);
+    } else {
+      try {
+        await axios.patch(`${API_URL}/usuarios/${u.id}/activar`, {}, { headers });
+        cargarUsuarios();
+      } catch {
+        setError('Error al activar usuario');
+      }
+    }
+  };
+
+  const confirmarInactivar = async () => {
+    if (!motivoInactivar.trim()) {
+      setError('Debes escribir una explicación');
+      return;
+    }
     try {
-      const accion = u.activo ? 'inactivar' : 'activar';
-      await axios.patch(`${API_URL}/usuarios/${u.id}/${accion}`, {}, { headers });
+      await axios.patch(`${API_URL}/usuarios/${inactivarTarget.id}/inactivar`,
+        { descripcion: motivoInactivar.trim() }, { headers });
+      setShowInactivarModal(false);
+      setInactivarTarget(null);
       cargarUsuarios();
     } catch {
-      setError('Error al cambiar estado del usuario');
+      setError('Error al inactivar usuario');
     }
   };
 
@@ -341,6 +373,59 @@ function Usuarios() {
                 disabled={guardando}
               >
                 {guardando ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal inactivar ── */}
+      {showInactivarModal && (
+        <div className="modal-overlay" onClick={() => setShowInactivarModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>🔒 Inactivar Usuario</h3>
+            {error && <div className="message error-message">{error}</div>}
+
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              ¿Estás seguro de inactivar a <strong style={{ color: 'var(--text)' }}>{inactivarTarget?.nombre}</strong>?
+            </p>
+
+            <div className="form-group">
+              <label>Motivo / Explicación *</label>
+              <textarea
+                value={motivoInactivar}
+                onChange={(e) => setMotivoInactivar(e.target.value)}
+                placeholder="Escribe el motivo por el que se inactiva este usuario..."
+                rows={3}
+                style={{
+                  background: 'var(--surface)', border: '1px solid var(--border)',
+                  borderRadius: '8px', padding: '12px 16px', fontSize: '15px',
+                  color: 'var(--text)', fontFamily: 'DM Sans, sans-serif',
+                  resize: 'vertical', width: '100%',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                className="btn"
+                style={{
+                  flex: 1, background: 'var(--surface)',
+                  color: 'var(--text-muted)', border: '1px solid var(--border)',
+                }}
+                onClick={() => setShowInactivarModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn"
+                style={{
+                  flex: 1, background: 'var(--red-bg)',
+                  color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)',
+                }}
+                onClick={confirmarInactivar}
+              >
+                🔒 Inactivar
               </button>
             </div>
           </div>

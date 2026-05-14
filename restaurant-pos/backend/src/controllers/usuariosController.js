@@ -41,6 +41,11 @@ const crearUsuario = async (req, res) => {
     return res.status(400).json({ error: 'Todos los campos son obligatorios' });
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(correo)) {
+    return res.status(400).json({ error: 'El formato del correo no es válido' });
+  }
+
   const rolesValidos = ['Admin', 'Cajero', 'Cocinero', 'Despachador'];
   if (!rolesValidos.includes(rol)) {
     return res.status(400).json({ error: 'Rol inválido' });
@@ -79,6 +84,11 @@ const actualizarUsuario = async (req, res) => {
   const { nombre, correo, rol, password } = req.body;
 
   try {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (correo && !emailRegex.test(correo)) {
+      return res.status(400).json({ error: 'El formato del correo no es válido' });
+    }
+
     const updates = {};
     if (nombre) updates.nombre = nombre;
     if (correo) updates.correo = correo;
@@ -111,6 +121,7 @@ const actualizarUsuario = async (req, res) => {
 // INACTIVAR USUARIO
 const inactivarUsuario = async (req, res) => {
   const { id } = req.params;
+  const { descripcion } = req.body;
   try {
     const { data, error } = await supabase
       .from('usuarios')
@@ -121,10 +132,11 @@ const inactivarUsuario = async (req, res) => {
 
     if (error || !data) return res.status(404).json({ error: 'Usuario no encontrado' });
 
+    const motivo = descripcion || `Usuario ID ${id} inactivado`;
     await supabase.from('bitacora_permisos').insert({
       usuario_id: req.user.id,
       accion: 'INACTIVAR_USUARIO',
-      descripcion: `Usuario ID ${id} inactivado`
+      descripcion: motivo
     });
 
     res.json({ message: 'Usuario inactivado exitosamente', usuario: data });

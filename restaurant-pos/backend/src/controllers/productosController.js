@@ -64,7 +64,7 @@ const crearProducto = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('productos')
-      .insert({ nombre, descripcion, precio, categoria_id, imagen_url: imagen_url || null })
+      .insert({ nombre, descripcion, precio, categoria_id, imagen_url: imagen_url || null, stock: 0, stock_minimo: 0 })
       .select('*, categorias(nombre)').single();
     if (error) throw error;
 
