@@ -1,15 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const rolColor = (rol) =>
   ({ Admin: 'warning', Cajero: 'primary', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
 
-/**
- * Sidebar reutilizable con hamburguesa y soporte responsive.
- * Props:
- *  - usuario: objeto con { nombre, rol }
- *  - activeRoute: 'dashboard' | 'usuarios' | 'productos' | 'caja' | ...
- */
 export default function Sidebar({ usuario, activeRoute }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -26,28 +20,26 @@ export default function Sidebar({ usuario, activeRoute }) {
   const handleLogout = () => { localStorage.clear(); navigate('/login'); };
 
   const navItems = [
-    { to: '/dashboard', icon: '📊', label: 'Dashboard',  key: 'dashboard' },
+    { to: '/dashboard', icon: '📊', label: 'Dashboard', key: 'dashboard' },
     ...(usuario?.rol === 'Admin'
       ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios', key: 'usuarios' }]
       : []),
     { to: '/productos', icon: '🍔', label: 'Productos', key: 'productos' },
-    // Inventario: visible solo para Admin
     ...(usuario?.rol === 'Admin'
       ? [{ to: '/inventario', icon: '📦', label: 'Inventario', key: 'inventario' }]
       : []),
-    // Promociones: visible para Admin y Cajero
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
       ? [{ to: '/promociones', icon: '🎉', label: 'Promociones', key: 'promociones' }]
       : []),
-    // Caja: visible para Admin y Cajero
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
       ? [{ to: '/caja', icon: '🧾', label: 'Caja', key: 'caja' }]
       : []),
-    // Cocina: visible para Admin y Cocinero
+    ...(['Admin', 'Cajero'].includes(usuario?.rol)
+      ? [{ to: '/mesas', icon: '🗺️', label: 'Mesas', key: 'mesas' }]
+      : []),
     ...(['Admin', 'Cocinero'].includes(usuario?.rol)
       ? [{ to: '/cocina', icon: '👨‍🍳', label: 'Cocina', key: 'cocina', disabled: true }]
       : []),
-    // Despacho: visible para Admin y Despachador
     ...(['Admin', 'Despachador'].includes(usuario?.rol)
       ? [{ to: '/despacho', icon: '🚀', label: 'Despacho', key: 'despacho', disabled: true }]
       : []),
@@ -110,7 +102,6 @@ export default function Sidebar({ usuario, activeRoute }) {
 
   return (
     <>
-      {/* Botón hamburguesa flotante (móvil) */}
       <button
         className="hamburger-btn hamburger-mobile"
         onClick={() => setDrawerOpen(true)}
@@ -119,7 +110,6 @@ export default function Sidebar({ usuario, activeRoute }) {
         <HamburgerIcon />
       </button>
 
-      {/* Drawer overlay (móvil) */}
       {drawerOpen && (
         <div className="sidebar-overlay" onClick={() => setDrawerOpen(false)}>
           <aside className="sidebar sidebar-drawer" onClick={(e) => e.stopPropagation()}>
@@ -137,8 +127,7 @@ export default function Sidebar({ usuario, activeRoute }) {
         </div>
       )}
 
-      {/* Sidebar desktop */}
-      <aside className={`sidebar sidebar-desktop ${collapsed ? 'sidebar-collapsed' : ''}`}>
+      <aside className="sidebar sidebar-desktop">
         <button
           className="hamburger-btn hamburger-desktop"
           onClick={() => setCollapsed((c) => !c)}
@@ -154,7 +143,7 @@ export default function Sidebar({ usuario, activeRoute }) {
 
 const HamburgerIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="3" y1="5"  x2="17" y2="5"  />
+    <line x1="3" y1="5" x2="17" y2="5" />
     <line x1="3" y1="10" x2="17" y2="10" />
     <line x1="3" y1="15" x2="17" y2="15" />
   </svg>
@@ -163,6 +152,6 @@ const HamburgerIcon = () => (
 const CloseIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <line x1="4" y1="4" x2="16" y2="16" />
-    <line x1="16" y1="4" x2="4"  y2="16" />
+    <line x1="16" y1="4" x2="4" y2="16" />
   </svg>
 );

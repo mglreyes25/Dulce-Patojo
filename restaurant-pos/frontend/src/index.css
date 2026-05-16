@@ -205,8 +205,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 @media (max-width: 900px) { .auth-left { display: none; } .auth-right { width: 100%; border-left: none; } }
 @media (max-width: 768px) {
   .dashboard-page { flex-direction: column; }
-  .sidebar { width: 100%; flex-direction: row; padding: 12px 20px; border-right: none; border-bottom: 1px solid var(--border); }
-  .sidebar nav, .sidebar-footer { display: none; }
+  .sidebar-desktop { width: 100%; flex-direction: row; padding: 12px 20px; border-right: none; border-bottom: 1px solid var(--border); }
+  .sidebar-desktop nav, .sidebar-desktop .sidebar-footer { display: none; }
   .main-content { padding: 20px; }
   .filtros-bar { flex-direction: column; }
 }

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -7,6 +7,8 @@ const usuariosRoutes    = require('./routes/usuariosRoutes');
 const productosRoutes   = require('./routes/productosRoutes');
 const promocionesRoutes = require('./routes/promocionesRoutes');
 const inventarioRoutes  = require('./routes/inventarioRoutes');
+const pedidosRoutes     = require('./routes/pedidosRoutes');
+const mesasRoutes       = require('./routes/mesasRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +21,8 @@ app.use('/usuarios',    usuariosRoutes);
 app.use('/productos',   productosRoutes);
 app.use('/promociones', promocionesRoutes);
 app.use('/inventario',  inventarioRoutes);
+app.use('/pedidos',     pedidosRoutes);
+app.use('/mesas',       mesasRoutes);
 
 app.get('/', (req, res) => res.json({ message: '🚀 Backend Restaurant POS funcionando' }));
 
