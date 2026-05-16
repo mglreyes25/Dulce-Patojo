@@ -70,7 +70,7 @@ export default function Caja() {
     const fetchData = async () => {
       try {
         const [resProd, resCat, resPromo, resMesas, resCombos] = await Promise.all([
-          axios.get(`${API}/productos`, { headers }),
+          axios.get(`${API}/productos?disponible=true`, { headers }),
           axios.get(`${API}/productos/categorias`, { headers }),
           axios.get(`${API}/promociones`, { headers }),
           axios.get(`${API}/mesas`, { headers }),
@@ -91,6 +91,10 @@ export default function Caja() {
   }, []);
 
   const agregarAlCarrito = (item, tipo) => {
+    if (tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0) {
+      alert(`"${item.nombre}" no tiene stock disponible`);
+      return;
+    }
     setCarrito(prev => {
       const idx = prev.findIndex(i => i.id === item.id && i.tipo === tipo);
       if (idx >= 0) {
@@ -145,6 +149,7 @@ export default function Caja() {
       const res = await axios.post(`${API}/pedidos`, body, { headers });
       setPedidoActual(res.data);
       setCarrito([]);
+      await recargarMesas();
       setModal(MODAL_PAGO);
     } catch (err) {
       console.error('Error al crear pedido:', err);
@@ -167,6 +172,7 @@ export default function Caja() {
         { headers }
       );
       setPedidoActual(res.data.pedido);
+      await recargarMesas();
       setModal(MODAL_TICKET);
     } catch (err) {
       console.error('Error al procesar pago:', err);
@@ -176,14 +182,24 @@ export default function Caja() {
     }
   };
 
+  const recargarMesas = async () => {
+    try {
+      const { data } = await axios.get(`${API}/mesas`, { headers });
+      setMesas(data || []);
+    } catch {}
+  };
+
   const cerrarModal = () => {
     setModal(null);
     setPedidoActual(null);
     setMetodoPago('efectivo');
     setMontoRecibido('');
+    recargarMesas();
   };
 
-  const renderItem = (item, tipo) => (
+  const renderItem = (item, tipo) => {
+    const sinStock = tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0;
+    return (
     <div
       key={`${tipo}-${item.id}`}
       onClick={() => agregarAlCarrito(item, tipo)}
@@ -191,26 +207,44 @@ export default function Caja() {
         background: 'var(--card)',
         borderRadius: '12px',
         padding: '12px',
-        cursor: 'pointer',
+        cursor: sinStock ? 'not-allowed' : 'pointer',
         border: '1px solid var(--border)',
         transition: 'all .2s',
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
         minHeight: '100px',
+        opacity: sinStock ? 0.5 : 1,
       }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--gold-light)'}
+      onMouseEnter={e => { if (!sinStock) e.currentTarget.style.borderColor = 'var(--gold-light)'; }}
       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
-      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{item.nombre}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{item.nombre}</span>
+        {item.stock !== undefined && Number(item.stock) <= Number(item.stock_minimo) && (
+          <span style={{
+            fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap',
+            background: Number(item.stock) <= 0 ? 'var(--red-bg)' : 'rgba(241,196,15,0.15)',
+            color: Number(item.stock) <= 0 ? '#e74c3c' : '#f1c40f',
+          }}>
+            {Number(item.stock) <= 0 ? 'Sin stock' : 'Stock bajo'}
+          </span>
+        )}
+      </div>
       {item.descripcion && (
         <span style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1 }}>{item.descripcion}</span>
       )}
-      <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
-        ${Number(item.precio).toFixed(2)}
-      </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
+          ${Number(item.precio).toFixed(2)}
+        </span>
+        {item.stock !== undefined && Number(item.stock) > Number(item.stock_minimo) && (
+          <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{item.stock} uds</span>
+        )}
+      </div>
     </div>
-  );
+    );
+  };
 
   const renderPromo = (promo) => {
     const info = TIPOS_PROMO[promo.tipo] || { label: promo.tipo, icon: '\uD83C\uDF89', color: '#666', bg: 'rgba(0,0,0,0.05)' };
@@ -278,7 +312,7 @@ export default function Caja() {
           background: 'var(--card)',
         }}>
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>
-            \uD83D\uDCCB Punto de Venta
+            Punto de Venta
           </h1>
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             {usuario?.nombre || 'Cajero'}
@@ -427,7 +461,7 @@ export default function Caja() {
                 {[
                   { value: 'en_mesa', label: 'En Mesa' },
                   { value: 'para_llevar', label: 'Para Llevar' },
-                  { value: 'recoger', label: 'Recoger' },
+                  { value: 'para_recoger', label: 'Recoger' },
                 ].map(t => (
                   <button
                     key={t.value}

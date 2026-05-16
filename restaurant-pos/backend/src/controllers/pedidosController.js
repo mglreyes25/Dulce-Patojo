@@ -1,5 +1,67 @@
 ﻿const supabase = require('../config/database');
 
+// ── HELPER: Descontar stock de un producto ──────────────────────
+const descontarStock = async (productoId, cantidad, descripcion, usuarioId) => {
+  const { data: prod } = await supabase
+    .from('productos')
+    .select('id, nombre, stock')
+    .eq('id', productoId)
+    .single();
+
+  if (!prod) return;
+
+  const stockAnterior = prod.stock || 0;
+  const stockNuevo = Math.max(0, stockAnterior - Number(cantidad));
+
+  await supabase
+    .from('productos')
+    .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
+    .eq('id', productoId);
+
+  await supabase
+    .from('inventario_movimientos')
+    .insert({
+      producto_id: productoId,
+      tipo: 'salida',
+      cantidad: Number(cantidad),
+      stock_anterior: stockAnterior,
+      stock_nuevo: stockNuevo,
+      descripcion: descripcion || `Salida de ${cantidad} unidad(es)`,
+      usuario_id: usuarioId,
+    });
+};
+
+// ── HELPER: Reponer stock de un producto (para cancelaciones) ──
+const reponerStock = async (productoId, cantidad, descripcion, usuarioId) => {
+  const { data: prod } = await supabase
+    .from('productos')
+    .select('id, nombre, stock')
+    .eq('id', productoId)
+    .single();
+
+  if (!prod) return;
+
+  const stockAnterior = prod.stock || 0;
+  const stockNuevo = stockAnterior + Number(cantidad);
+
+  await supabase
+    .from('productos')
+    .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
+    .eq('id', productoId);
+
+  await supabase
+    .from('inventario_movimientos')
+    .insert({
+      producto_id: productoId,
+      tipo: 'entrada',
+      cantidad: Number(cantidad),
+      stock_anterior: stockAnterior,
+      stock_nuevo: stockNuevo,
+      descripcion: descripcion || `Reposición de ${cantidad} unidad(es)`,
+      usuario_id: usuarioId,
+    });
+};
+
 // ── LISTAR PEDIDOS ──────────────────────────────────────────────
 const obtenerPedidos = async (req, res) => {
   try {
@@ -74,6 +136,30 @@ const crearPedido = async (req, res) => {
     return res.status(400).json({ error: 'Debe seleccionar una mesa para pedidos en mesa' });
   }
 
+  // ── Ocupar mesa INMEDIATAMENTE como operación independiente ──
+  if (mesa_id) {
+    const apiUrl = process.env.SUPABASE_URL;
+    const apiKey = process.env.SUPABASE_KEY;
+    console.log(`🪑 [DIRECTO] Ocupando mesa ID ${mesa_id}...`);
+    const resp = await fetch(`${apiUrl}/rest/v1/mesas?id=eq.${mesa_id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({ estado: 'ocupada' }),
+    });
+    const result = await resp.json();
+    console.log(`📦 [DIRECTO] Resultado mesa update:`, JSON.stringify(result));
+    if (!resp.ok) {
+      console.error('❌ [DIRECTO] Error al ocupar mesa:', result);
+    } else {
+      console.log('✅ [DIRECTO] Mesa ocupada correctamente');
+    }
+  }
+
   try {
     // Calcular subtotal y descuentos
     let subtotal = 0;
@@ -132,16 +218,43 @@ const crearPedido = async (req, res) => {
     if (itemsError) throw itemsError;
 
     // Registrar ticket
-    await supabase.from('tickets').insert({
+    const { error: ticketError } = await supabase.from('tickets').insert({
       pedido_id: pedido.id,
       numero_ticket: numeroTicket,
       fecha: hoy,
       contador_diario: numeroTicket,
     });
+    if (ticketError) console.error('Error registrando ticket:', ticketError);
 
-    // Si tiene mesa, marcarla como ocupada
-    if (mesa_id) {
-      await supabase.from('mesas').update({ estado: 'ocupada' }).eq('id', mesa_id);
+    // ── Descontar stock de productos ──────────────────────────────
+    for (const item of items) {
+      try {
+        if (item.tipo === 'producto') {
+          await descontarStock(item.id, item.cantidad, `Venta pedido #${numeroTicket}`, req.user.id);
+        } else if (item.tipo === 'combo') {
+          const { data: comboProds } = await supabase
+            .from('combo_productos')
+            .select('producto_id, cantidad')
+            .eq('combo_id', item.id);
+          if (comboProds) {
+            for (const cp of comboProds) {
+              const cant = Number(cp.cantidad) * Number(item.cantidad);
+              await descontarStock(cp.producto_id, cant, `Venta combo #${item.id} — pedido #${numeroTicket}`, req.user.id);
+            }
+          }
+        } else if (item.tipo === 'promocion') {
+          const { data: promo } = await supabase
+            .from('promociones')
+            .select('producto_id')
+            .eq('id', item.id)
+            .maybeSingle();
+          if (promo?.producto_id) {
+            await descontarStock(promo.producto_id, Number(item.cantidad), `Venta promoción #${item.id} — pedido #${numeroTicket}`, req.user.id);
+          }
+        }
+      } catch (stockErr) {
+        console.error(`Error descontando stock para item ${item.id}:`, stockErr);
+      }
     }
 
     // Bitácora
@@ -189,6 +302,39 @@ const cambiarEstadoPedido = async (req, res) => {
       .select('*, pedido_items(*)')
       .single();
     if (error) throw error;
+
+    // ── Restaurar stock si se cancela el pedido ──
+    if (estado === 'cancelado' && pedido.estado !== 'cancelado' && data.pedido_items) {
+      for (const item of data.pedido_items) {
+        try {
+          if (item.tipo_item === 'producto' && item.producto_id) {
+            await reponerStock(item.producto_id, item.cantidad, `Cancelación pedido #${pedido.numero_ticket}`, req.user.id);
+          } else if (item.tipo_item === 'combo' && item.combo_id) {
+            const { data: comboProds } = await supabase
+              .from('combo_productos')
+              .select('producto_id, cantidad')
+              .eq('combo_id', item.combo_id);
+            if (comboProds) {
+              for (const cp of comboProds) {
+                const cant = Number(cp.cantidad) * Number(item.cantidad);
+                await reponerStock(cp.producto_id, cant, `Cancelación combo #${item.combo_id} — pedido #${pedido.numero_ticket}`, req.user.id);
+              }
+            }
+          } else if (item.tipo_item === 'promocion' && item.promocion_id) {
+            const { data: promo } = await supabase
+              .from('promociones')
+              .select('producto_id')
+              .eq('id', item.promocion_id)
+              .maybeSingle();
+            if (promo?.producto_id) {
+              await reponerStock(promo.producto_id, item.cantidad, `Cancelación promoción #${item.promocion_id} — pedido #${pedido.numero_ticket}`, req.user.id);
+            }
+          }
+        } catch (stockErr) {
+          console.error(`Error restaurando stock para item ${item.id}:`, stockErr);
+        }
+      }
+    }
 
     await supabase.from('bitacora_permisos').insert({
       usuario_id: req.user.id, accion: 'ESTADO_PEDIDO',
@@ -304,8 +450,29 @@ const reimprimirTicket = async (req, res) => {
   return obtenerTicket(req, res);
 };
 
+// ── DIAGNÓSTICO: probar actualización de mesa directamente ────
+const probarMesa = async (req, res) => {
+  const { mesa_id } = req.body;
+  if (!mesa_id) return res.status(400).json({ error: 'mesa_id requerido' });
+  try {
+    console.log(`🧪 Probando update de mesa ID ${mesa_id} (type: ${typeof mesa_id})`);
+    const { data, error } = await supabase
+      .from('mesas')
+      .update({ estado: 'pagando' })
+      .eq('id', mesa_id)
+      .select();
+    console.log('🧪 Resultado:', JSON.stringify({ data, error }));
+    if (error) return res.status(500).json({ error: error.message, detalle: error });
+    res.json({ message: 'Update ejecutado', data, mesa_id, tipo: typeof mesa_id });
+  } catch (e) {
+    console.error('🧪 Error en probarMesa:', e);
+    res.status(500).json({ error: e.message });
+  }
+};
+
 module.exports = {
   obtenerPedidos, obtenerPedidoPorId, obtenerProximoTicket,
   crearPedido, cambiarEstadoPedido,
   procesarPago, obtenerTicket, reimprimirTicket,
+  probarMesa,
 };

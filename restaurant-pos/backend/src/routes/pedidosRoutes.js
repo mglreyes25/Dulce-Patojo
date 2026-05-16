@@ -6,6 +6,7 @@ const {
   obtenerPedidos, obtenerPedidoPorId, obtenerProximoTicket,
   crearPedido, cambiarEstadoPedido,
   procesarPago, obtenerTicket, reimprimirTicket,
+  probarMesa,
 } = require('../controllers/pedidosController');
 
 router.get('/contador-ticket', auth, obtenerProximoTicket);
@@ -16,5 +17,6 @@ router.patch('/:id/estado',     auth, cambiarEstadoPedido);
 router.post('/:id/pagar',       auth, requireRol('Admin', 'Cajero'), procesarPago);
 router.get('/:id/ticket',       auth, obtenerTicket);
 router.post('/:id/reimprimir',  auth, requireRol('Admin', 'Cajero'), reimprimirTicket);
+router.post('/diagnostico/mesa', auth, probarMesa);
 
 module.exports = router;
