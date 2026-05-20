@@ -62,8 +62,8 @@ export default function Caja() {
 
   useInactividad(300000, () => navigate('/login'));
 
-  const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
-  const descuentoTotal = carrito.reduce((sum, item) => sum + (item.descuento || 0) * item.cantidad, 0);
+  const total = carrito.reduce((sum, item) => sum + (Number(item.precio_final || item.precio || 0) * item.cantidad), 0);
+  const descuentoTotal = carrito.reduce((sum, item) => sum + (Number(item.descuento || 0) * item.cantidad), 0);
   const subtotal = total + descuentoTotal;
 
   const montoPago = pedidoActual ? Number(pedidoActual.total_con_iva || pedidoActual.total) : total;
@@ -421,7 +421,7 @@ export default function Caja() {
                     {item.nombre}
                   </span>
                   <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
-                    ${(item.precio * item.cantidad).toFixed(2)}
+                    ${(Number(item.precio_final || item.precio || 0) * item.cantidad).toFixed(2)}
                   </span>
                   <button onClick={() => cambiarCantidad(idx, -1)} style={btnCantidad}>-</button>
                   <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: '16px', textAlign: 'center' }}>

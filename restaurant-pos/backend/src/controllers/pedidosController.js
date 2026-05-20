@@ -328,7 +328,7 @@ const crearPedido = async (req, res) => {
     // Bitácora
     await supabase.from('bitacora_permisos').insert({
       usuario_id: req.user.id, accion: 'CREAR_PEDIDO',
-      descripcion: `Pedido #${numeroTicket} — ${items.length} item(s), total: $${total}`,
+      descripcion: `Pedido #${numeroTicket} — ${items.length} item(s), total: $${baseImponible}`,
     });
 
     // Socket: notificar a cocina
