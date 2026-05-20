@@ -46,64 +46,72 @@ const descontarStockPorReceta = async (productoId, cantidad, descripcion, usuari
 
 // ── HELPER: Descontar stock de un producto ──────────────────────
 const descontarStock = async (productoId, cantidad, descripcion, usuarioId) => {
-  const { data: prod } = await supabase
-    .from('productos')
-    .select('id, nombre, stock')
-    .eq('id', productoId)
-    .single();
+  try {
+    const { data: prod } = await supabase
+      .from('productos')
+      .select('id, nombre, stock')
+      .eq('id', productoId)
+      .single();
 
-  if (!prod) return;
+    if (!prod) return;
 
-  const stockAnterior = prod.stock || 0;
-  const stockNuevo = Math.max(0, stockAnterior - Number(cantidad));
+    const stockAnterior = prod.stock || 0;
+    const stockNuevo = Math.max(0, stockAnterior - Number(cantidad));
 
-  await supabase
-    .from('productos')
-    .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
-    .eq('id', productoId);
+    await supabase
+      .from('productos')
+      .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
+      .eq('id', productoId);
 
-  await supabase
-    .from('inventario_movimientos')
-    .insert({
-      producto_id: productoId,
-      tipo: 'salida',
-      cantidad: Number(cantidad),
-      stock_anterior: stockAnterior,
-      stock_nuevo: stockNuevo,
-      descripcion: descripcion || `Salida de ${cantidad} unidad(es)`,
-      usuario_id: usuarioId,
-    });
+    await supabase
+      .from('inventario_movimientos')
+      .insert({
+        producto_id: productoId,
+        tipo: 'salida',
+        cantidad: Number(cantidad),
+        stock_anterior: stockAnterior,
+        stock_nuevo: stockNuevo,
+        descripcion: descripcion || `Salida de ${cantidad} unidad(es)`,
+        usuario_id: usuarioId,
+      });
+  } catch (e) {
+    console.error(`Error descontando stock (producto ${productoId}):`, e);
+  }
 };
 
 // ── HELPER: Reponer stock de un producto (para cancelaciones) ──
 const reponerStock = async (productoId, cantidad, descripcion, usuarioId) => {
-  const { data: prod } = await supabase
-    .from('productos')
-    .select('id, nombre, stock')
-    .eq('id', productoId)
-    .single();
+  try {
+    const { data: prod } = await supabase
+      .from('productos')
+      .select('id, nombre, stock')
+      .eq('id', productoId)
+      .single();
 
-  if (!prod) return;
+    if (!prod) return;
 
-  const stockAnterior = prod.stock || 0;
-  const stockNuevo = stockAnterior + Number(cantidad);
+    const stockAnterior = prod.stock || 0;
+    const stockNuevo = stockAnterior + Number(cantidad);
 
-  await supabase
-    .from('productos')
-    .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
-    .eq('id', productoId);
+    await supabase
+      .from('productos')
+      .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
+      .eq('id', productoId);
 
-  await supabase
-    .from('inventario_movimientos')
-    .insert({
-      producto_id: productoId,
-      tipo: 'entrada',
-      cantidad: Number(cantidad),
-      stock_anterior: stockAnterior,
-      stock_nuevo: stockNuevo,
-      descripcion: descripcion || `Reposición de ${cantidad} unidad(es)`,
-      usuario_id: usuarioId,
-    });
+    await supabase
+      .from('inventario_movimientos')
+      .insert({
+        producto_id: productoId,
+        tipo: 'entrada',
+        cantidad: Number(cantidad),
+        stock_anterior: stockAnterior,
+        stock_nuevo: stockNuevo,
+        descripcion: descripcion || `Reposición de ${cantidad} unidad(es)`,
+        usuario_id: usuarioId,
+      });
+  } catch (e) {
+    console.error(`Error reponiendo stock (producto ${productoId}):`, e);
+  }
 };
 
 // ── LISTAR PEDIDOS ──────────────────────────────────────────────
@@ -263,7 +271,7 @@ const crearPedido = async (req, res) => {
       tipo_item: item.tipo,
       nombre: item.nombre,
       cantidad: Number(item.cantidad),
-      precio_unitario: Number(item.precio),
+      precio_unitario: Number(item.precio) || 0,
       notas: item.notas || null,
     }));
 

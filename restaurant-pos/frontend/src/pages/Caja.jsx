@@ -140,7 +140,7 @@ export default function Caja() {
           id: i.id,
           tipo: i.tipo,
           nombre: i.nombre,
-          precio: i.precio_final || i.precio,
+          precio: i.precio_final || i.precio || 0,
           descuento: i.descuento || 0,
           cantidad: i.cantidad,
         })),
