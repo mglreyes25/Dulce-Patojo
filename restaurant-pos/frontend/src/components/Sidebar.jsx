@@ -24,24 +24,30 @@ export default function Sidebar({ usuario, activeRoute }) {
     ...(usuario?.rol === 'Admin'
       ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios', key: 'usuarios' }]
       : []),
-    { to: '/productos', icon: '🍔', label: 'Productos', key: 'productos' },
+    { to: '/productos', icon: '🧁', label: 'Productos', key: 'productos' },
     ...(usuario?.rol === 'Admin'
       ? [{ to: '/inventario', icon: '📦', label: 'Inventario', key: 'inventario' }]
+      : []),
+    ...(usuario?.rol === 'Admin'
+      ? [{ to: '/ingredientes', icon: '🥗', label: 'Ingredientes', key: 'ingredientes' }]
+      : []),
+    ...(usuario?.rol === 'Admin'
+      ? [{ to: '/recetas', icon: '📋', label: 'Recetas', key: 'recetas' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
       ? [{ to: '/promociones', icon: '🎉', label: 'Promociones', key: 'promociones' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
-      ? [{ to: '/caja', icon: '🧾', label: 'Caja', key: 'caja' }]
+      ? [{ to: '/caja', icon: '☕', label: 'Caja', key: 'caja' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
       ? [{ to: '/mesas', icon: '🗺️', label: 'Mesas', key: 'mesas' }]
       : []),
     ...(['Admin', 'Cocinero'].includes(usuario?.rol)
-      ? [{ to: '/cocina', icon: '👨‍🍳', label: 'Cocina', key: 'cocina', disabled: true }]
+      ? [{ to: '/cocina', icon: '👨‍🍳', label: 'Cocina', key: 'cocina' }]
       : []),
     ...(['Admin', 'Despachador'].includes(usuario?.rol)
-      ? [{ to: '/despacho', icon: '🚀', label: 'Despacho', key: 'despacho', disabled: true }]
+      ? [{ to: '/despacho', icon: '🚀', label: 'Despacho', key: 'despacho' }]
       : []),
     { to: '#reportes', icon: '📈', label: 'Reportes', key: 'reportes', disabled: true },
   ];
@@ -50,10 +56,9 @@ export default function Sidebar({ usuario, activeRoute }) {
     <>
       <div className="sidebar-logo">
         {!collapsed && (
-          <>
-            <h1>Dulce Patojo</h1>
-            <p>Sistema POS</p>
-          </>
+          <a href="/dashboard" style={{ textDecoration: 'none' }}>
+            <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 48, display: 'block' }} />
+          </a>
         )}
       </div>
 

@@ -11,9 +11,11 @@
   --gold:      #c9a84c;
   --gold-light:#e4c97e;
   --gold-dim:  rgba(201,168,76,0.15);
+  --caramel:   #d4a373;
+  --caramel-dim: rgba(212,163,115,0.15);
   --text:      #f0ead8;
   --text-muted:#8a8070;
-  --text-dim:  #5a5448;
+  --text-dim:  #7a7060;
   --red:       #c0392b;
   --red-bg:    rgba(192,57,43,0.15);
   --green:     #27ae60;
@@ -33,7 +35,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .auth-left {
   flex: 1;
   background: linear-gradient(160deg, rgba(15,13,10,0.7) 0%, rgba(15,13,10,0.4) 100%),
-    url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80') center/cover;
+    url('https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=1200&q=80') center/cover;
   display: flex; flex-direction: column; justify-content: flex-end;
   padding: 60px; position: relative; overflow: hidden;
 }
@@ -520,6 +522,26 @@ a.nav-disabled {
   border: 1px solid var(--border);
 }
  
+/* ══ PRINT STYLES (tickets) ═══════════════════════════════════════ */
+@media print {
+  body * { visibility: hidden; }
+  .ticket-print, .ticket-print * { visibility: visible; }
+  .ticket-print { position: absolute; left: 0; top: 0; width: 80mm; padding: 8px; background: #fff; color: #000; font-size: 11px; font-family: 'Courier New', monospace; }
+  .modal-overlay { background: none !important; }
+}
+
+/* ══ TICKET LAYOUT ════════════════════════════════════════════════ */
+.ticket-print { width: 100%; max-width: 80mm; margin: 0 auto; }
+.ticket-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 8px; }
+.ticket-header h2 { font-family: 'Playfair Display', serif; font-size: 16px; color: #000; margin: 0 0 4px; }
+.ticket-header p { font-size: 10px; color: #666; margin: 2px 0; }
+.ticket-items { border-bottom: 1px dashed #ccc; padding-bottom: 8px; margin-bottom: 8px; }
+.ticket-item { display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; }
+.ticket-totals { margin-bottom: 8px; }
+.ticket-total-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 11px; }
+.ticket-grand-total { font-weight: 700; font-size: 14px; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
+.ticket-footer { text-align: center; font-size: 10px; color: #666; border-top: 1px dashed #ccc; padding-top: 8px; }
+
 /* Nav item deshabilitado */
 .nav-disabled {
   display: flex;

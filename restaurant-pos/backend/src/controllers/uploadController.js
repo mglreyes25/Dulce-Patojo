@@ -1,17 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
-
-// Cliente especial con service_role key → bypasea RLS en Storage
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+const { supabaseAdmin } = require('../config/database');
 
 /**
  * POST /productos/upload-imagen

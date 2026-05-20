@@ -41,7 +41,7 @@ function Register() {
     }
 
     try {
-      await axios.post(`${API_URL}/auth/register`, {
+      await axios.post(`${API_URL}/auth/registro-publico`, {
         nombre: form.nombre, correo: form.correo,
         password: form.password, rol: form.rol,
       });

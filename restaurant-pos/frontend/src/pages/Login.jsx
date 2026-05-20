@@ -45,13 +45,10 @@ function Login() {
     <div className="auth-page">
       <div className="auth-left">
         <div className="auth-left-content">
-          <div className="auth-brand">
-            <span>Sistema POS</span>
-            Dulce Patojo
-          </div>
+          <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 96, marginBottom: 24 }} />
           <p className="auth-tagline">
-            Gestiona tu restaurante con elegancia. Control total de pedidos,
-            usuarios y operaciones en un solo lugar.
+            Sistema Administrativo y Contable para tu cafetería.
+            Control total de pedidos, usuarios y operaciones en un solo lugar.
           </p>
         </div>
       </div>

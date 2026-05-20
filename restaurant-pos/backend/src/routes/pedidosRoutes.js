@@ -6,10 +6,11 @@ const {
   obtenerPedidos, obtenerPedidoPorId, obtenerProximoTicket,
   crearPedido, cambiarEstadoPedido,
   procesarPago, obtenerTicket, reimprimirTicket,
-  probarMesa,
+  probarMesa, obtenerResumen,
 } = require('../controllers/pedidosController');
 
 router.get('/contador-ticket', auth, obtenerProximoTicket);
+router.get('/resumen',         auth, obtenerResumen);
 router.get('/',                 auth, obtenerPedidos);
 router.get('/:id',              auth, obtenerPedidoPorId);
 router.post('/',                auth, requireRol('Admin', 'Cajero'), crearPedido);

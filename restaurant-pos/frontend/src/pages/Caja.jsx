@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
+import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
 
 const API = 'http://localhost:5000';
@@ -50,8 +51,10 @@ export default function Caja() {
   const [pedidoActual, setPedidoActual] = useState(null);
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [montoRecibido, setMontoRecibido] = useState('');
+  const [propina, setPropina] = useState(0);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const token = localStorage.getItem('token');
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
@@ -63,7 +66,7 @@ export default function Caja() {
   const descuentoTotal = carrito.reduce((sum, item) => sum + (item.descuento || 0) * item.cantidad, 0);
   const subtotal = total + descuentoTotal;
 
-  const montoPago = pedidoActual ? Number(pedidoActual.total) : total;
+  const montoPago = pedidoActual ? Number(pedidoActual.total_con_iva || pedidoActual.total) : total;
   const cambio = Math.max(0, Number(montoRecibido || 0) - montoPago);
 
   useEffect(() => {
@@ -92,7 +95,7 @@ export default function Caja() {
 
   const agregarAlCarrito = (item, tipo) => {
     if (tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0) {
-      alert(`"${item.nombre}" no tiene stock disponible`);
+      addToast(`"${item.nombre}" no tiene stock disponible`, 'error');
       return;
     }
     setCarrito(prev => {
@@ -153,22 +156,23 @@ export default function Caja() {
       setModal(MODAL_PAGO);
     } catch (err) {
       console.error('Error al crear pedido:', err);
-      alert(err.response?.data?.error || 'Error al crear pedido');
+      addToast(err.response?.data?.error || 'Error al crear pedido', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
   const procesarPago = async () => {
-    if (metodoPago === 'efectivo' && Number(montoRecibido) < montoPago) {
-      alert(`Monto insuficiente. Total: $${montoPago.toFixed(2)}, Recibido: $${Number(montoRecibido).toFixed(2)}`);
+    const totalConPropina = montoPago + propina;
+    if (metodoPago === 'efectivo' && Number(montoRecibido) < totalConPropina) {
+      addToast(`Monto insuficiente. Total: $${totalConPropina.toFixed(2)}, Recibido: $${Number(montoRecibido).toFixed(2)}`, 'error');
       return;
     }
     setProcesandoPago(true);
     try {
       const res = await axios.post(
         `${API}/pedidos/${pedidoActual.id}/pagar`,
-        { metodo_pago: metodoPago, monto_recibido: Number(montoRecibido) || null },
+        { metodo_pago: metodoPago, monto_recibido: Number(montoRecibido) || null, propina: propina || 0 },
         { headers }
       );
       setPedidoActual(res.data.pedido);
@@ -176,7 +180,7 @@ export default function Caja() {
       setModal(MODAL_TICKET);
     } catch (err) {
       console.error('Error al procesar pago:', err);
-      alert(err.response?.data?.error || 'Error al procesar pago');
+      addToast(err.response?.data?.error || 'Error al procesar pago', 'error');
     } finally {
       setProcesandoPago(false);
     }
@@ -193,6 +197,7 @@ export default function Caja() {
     setModal(null);
     setPedidoActual(null);
     setMetodoPago('efectivo');
+    setPropina(0);
     setMontoRecibido('');
     recargarMesas();
   };
@@ -462,6 +467,7 @@ export default function Caja() {
                   { value: 'en_mesa', label: 'En Mesa' },
                   { value: 'para_llevar', label: 'Para Llevar' },
                   { value: 'para_recoger', label: 'Recoger' },
+                  { value: 'domicilio', label: 'Domicilio' },
                 ].map(t => (
                   <button
                     key={t.value}
@@ -599,6 +605,9 @@ export default function Caja() {
                 {[
                   { value: 'efectivo', label: 'Efectivo' },
                   { value: 'tarjeta', label: 'Tarjeta (POS)' },
+                  { value: 'qr', label: 'QR' },
+                  { value: 'billetera_digital', label: 'Billetera' },
+                  { value: 'transferencia', label: 'Transferencia' },
                 ].map(m => (
                   <button key={m.value} onClick={() => { setMetodoPago(m.value); setMontoRecibido(''); }}
                     style={{
@@ -613,19 +622,34 @@ export default function Caja() {
                 ))}
               </div>
 
+              {/* Propina */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                {[0, 0.50, 1.00, 2.00].map(tip => (
+                  <button key={tip} onClick={() => setPropina(tip)}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 8,
+                      border: propina === tip ? '2px solid var(--gold-light)' : '1px solid var(--border)',
+                      background: propina === tip ? 'rgba(201,168,76,0.15)' : 'var(--surface)',
+                      color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: 12,
+                    }}>
+                    {tip === 0 ? 'Sin' : `$${tip.toFixed(2)}`}
+                  </button>
+                ))}
+              </div>
+
               {metodoPago === 'efectivo' && (
                 <>
                   <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                     Monto recibido
                   </label>
-                  <input type="number" step="0.01" min={montoPago} value={montoRecibido}
+                  <input type="number" step="0.01" min={montoPago + propina} value={montoRecibido}
                     onChange={e => setMontoRecibido(e.target.value)}
                     style={{
                       width: '100%', padding: '12px', borderRadius: '8px',
                       border: '1px solid var(--border)', background: 'var(--surface)',
                       color: 'var(--text)', fontSize: '18px', fontWeight: 700, marginBottom: '12px',
                     }} />
-                  {Number(montoRecibido || 0) >= montoPago && (
+                  {Number(montoRecibido || 0) >= (montoPago + propina) && (
                     <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                       <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cambio: </span>
                       <span style={{ fontSize: '20px', fontWeight: 700, color: '#2ecc71' }}>
@@ -645,6 +669,10 @@ export default function Caja() {
                   }}>
                   Cancelar
                 </button>
+                <div style={{ flex: 1, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', padding: '12px 0' }}>
+                  Total: <strong style={{ fontSize: 18, color: 'var(--text)' }}>${(montoPago + propina).toFixed(2)}</strong>
+                  {propina > 0 && <span style={{ fontSize: 11 }}> (incl. ${propina.toFixed(2)} propina)</span>}
+                </div>
                 <button onClick={procesarPago} disabled={procesandoPago}
                   style={{
                     flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
@@ -708,13 +736,31 @@ export default function Caja() {
                     <span>-${Number(pedidoActual.descuento).toFixed(2)}</span>
                   </div>
                 )}
+                {Number(pedidoActual.iva || 0) > 0 && (
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: '11px', marginBottom: '4px', color: '#666',
+                  }}>
+                    <span>IVA 13%</span>
+                    <span>${Number(pedidoActual.iva).toFixed(2)}</span>
+                  </div>
+                )}
+                {Number(pedidoActual.pagos?.[0]?.propina || 0) > 0 && (
+                  <div style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: '11px', marginBottom: '4px', color: '#666',
+                  }}>
+                    <span>Propina</span>
+                    <span>$${Number(pedidoActual.pagos[0].propina).toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{
                   display: 'flex', justifyContent: 'space-between',
                   fontSize: '16px', fontWeight: 800,
                   borderTop: '1px solid #ccc', paddingTop: '8px', marginTop: '8px',
                 }}>
                   <span>TOTAL</span>
-                  <span>${Number(pedidoActual.total).toFixed(2)}</span>
+                  <span>${Number(pedidoActual.total_con_iva || pedidoActual.total).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -723,7 +769,7 @@ export default function Caja() {
                 textAlign: 'center', fontSize: '10px', color: '#999',
               }}>
                 <p style={{ margin: 0 }}>
-                  Tipo: {pedidoActual.tipo === 'en_mesa' ? 'En mesa' : pedidoActual.tipo === 'para_llevar' ? 'Para llevar' : 'Para recoger'}
+                  Tipo: {pedidoActual.tipo === 'en_mesa' ? 'En mesa' : pedidoActual.tipo === 'para_llevar' ? 'Para llevar' : pedidoActual.tipo === 'domicilio' ? 'Domicilio' : 'Para recoger'}
                 </p>
                 {pedidoActual.cliente_nombre && (
                   <p style={{ margin: '4px 0 0' }}>Cliente: {pedidoActual.cliente_nombre}</p>

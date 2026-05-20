@@ -1,4 +1,5 @@
 ﻿import { Routes, Route, Navigate } from 'react-router-dom';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Usuarios from './pages/Usuarios';
@@ -7,22 +8,27 @@ import Caja from './pages/Caja';
 import Promociones from './pages/Promociones';
 import Inventario from './pages/Inventario';
 import Mesas from './pages/Mesas';
-import './App.css';
+import Cocina from './pages/Cocina';
+import Despacho from './pages/Despacho';
+import Ingredientes from './pages/Ingredientes';
+import Recetas from './pages/Recetas';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/usuarios" element={<Usuarios />} />
-      <Route path="/productos" element={<Productos />} />
-      <Route path="/caja" element={<Caja />} />
-      <Route path="/promociones" element={<Promociones />} />
-      <Route path="/inventario" element={<Inventario />} />
-      <Route path="/mesas" element={<Mesas />} />
-      <Route path="/cocina" element={<Dashboard />} />
-      <Route path="/despacho" element={<Dashboard />} />
+      <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+      <Route path="/usuarios" element={<ErrorBoundary><Usuarios /></ErrorBoundary>} />
+      <Route path="/productos" element={<ErrorBoundary><Productos /></ErrorBoundary>} />
+      <Route path="/caja" element={<ErrorBoundary><Caja /></ErrorBoundary>} />
+      <Route path="/promociones" element={<ErrorBoundary><Promociones /></ErrorBoundary>} />
+      <Route path="/inventario" element={<ErrorBoundary><Inventario /></ErrorBoundary>} />
+      <Route path="/ingredientes" element={<ErrorBoundary><Ingredientes /></ErrorBoundary>} />
+      <Route path="/recetas" element={<ErrorBoundary><Recetas /></ErrorBoundary>} />
+      <Route path="/mesas" element={<ErrorBoundary><Mesas /></ErrorBoundary>} />
+      <Route path="/cocina" element={<ErrorBoundary><Cocina /></ErrorBoundary>} />
+      <Route path="/despacho" element={<ErrorBoundary><Despacho /></ErrorBoundary>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

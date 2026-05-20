@@ -20,6 +20,8 @@ export default function Inventario() {
 
   const [showMovimientos, setShowMovimientos] = useState(null);
   const [movimientos, setMovimientos]         = useState([]);
+  const [ajusteModal, setAjusteModal]         = useState(null);
+  const [ajusteDesc, setAjusteDesc]           = useState('');
 
   const navigate = useNavigate();
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
@@ -92,19 +94,25 @@ export default function Inventario() {
     }
   };
 
-  const handleAjuste = async (productoId, stockNuevo) => {
-    const desc = prompt('Motivo del ajuste:');
-    if (desc === null) return;
+  const confirmarAjuste = async () => {
+    if (!ajusteModal) return;
     try {
       await axios.post(`${API}/inventario/ajuste`, {
-        producto_id: productoId,
-        stock_nuevo: Number(stockNuevo),
-        descripcion: desc || undefined,
+        producto_id: ajusteModal.productoId,
+        stock_nuevo: Number(ajusteModal.stockNuevo),
+        descripcion: ajusteDesc || undefined,
       }, { headers });
       cargarInventario();
+      setAjusteModal(null);
+      setAjusteDesc('');
     } catch (e) {
       setError(e.response?.data?.error || 'Error al ajustar stock');
     }
+  };
+
+  const abrirAjuste = (productoId, stockNuevo) => {
+    setAjusteModal({ productoId, stockNuevo });
+    setAjusteDesc('');
   };
 
   const verMovimientos = async (productoId) => {
@@ -264,12 +272,7 @@ export default function Inventario() {
                         <button
                           className="btn-small"
                           style={{ background: 'var(--surface)', color: '#f1c40f', border: '1px solid rgba(241,196,15,0.3)' }}
-                          onClick={() => {
-                            const nuevo = prompt('Nuevo stock:', p.stock);
-                            if (nuevo !== null && !isNaN(nuevo) && Number(nuevo) >= 0) {
-                              handleAjuste(p.id, Number(nuevo));
-                            }
-                          }}
+                          onClick={() => abrirAjuste(p.id, p.stock)}
                         >
                           ✏️ Ajustar
                         </button>
@@ -392,6 +395,48 @@ export default function Inventario() {
             >
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ajuste de stock */}
+      {ajusteModal && (
+        <div className="modal-overlay" onClick={() => { setAjusteModal(null); setAjusteDesc(''); }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3>✏️ Ajustar Stock</h3>
+            <div className="form-group">
+              <label>Nuevo stock</label>
+              <input
+                type="number" min="0"
+                value={ajusteModal.stockNuevo}
+                onChange={e => setAjusteModal({ ...ajusteModal, stockNuevo: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Motivo del ajuste</label>
+              <input
+                type="text"
+                value={ajusteDesc}
+                onChange={e => setAjusteDesc(e.target.value)}
+                placeholder="Ej: Inventario físico, merma, etc."
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button
+                className="btn"
+                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={() => { setAjusteModal(null); setAjusteDesc(''); }}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={confirmarAjuste}
+              >
+                Confirmar Ajuste
+              </button>
+            </div>
           </div>
         </div>
       )}

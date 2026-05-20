@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
+import ConfirmModal from '../components/ConfirmModal';
 
 const API = 'http://localhost:5000';
 
@@ -139,6 +140,7 @@ export default function Promociones() {
   const [showModal, setShowModal]       = useState(false);
   const [editando, setEditando]         = useState(null);
   const [guardando, setGuardando]       = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [form, setForm] = useState({
     nombre: '', descripcion: '', tipo: 'descuento_porcentaje',
     valor: '', producto_id: '', categoria_id: '',
@@ -248,12 +250,13 @@ export default function Promociones() {
     } catch { setError('Error al cambiar estado'); }
   };
 
-  const handleEliminar = async (p) => {
-    if (!window.confirm(`¿Eliminar la promoción "${p.nombre}"?`)) return;
+  const confirmEliminar = async () => {
+    if (!deleteConfirm) return;
     try {
-      await axios.delete(`${API}/promociones/${p.id}`, { headers });
+      await axios.delete(`${API}/promociones/${deleteConfirm.id}`, { headers });
       cargarTodo();
     } catch { setError('Error al eliminar'); }
+    setDeleteConfirm(null);
   };
 
   const activas   = promociones.filter(p => p.activo).length;
@@ -327,142 +330,22 @@ export default function Promociones() {
                 esAdmin={esAdmin}
                 onToggle={handleToggle}
                 onEditar={abrirEditar}
-                onEliminar={handleEliminar}
+                onEliminar={(p) => setDeleteConfirm(p)}
               />
             ))}
           </div>
         )}
       </main>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-wide" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3>{editando ? '✏️ Editar Promoción' : '➕ Nueva Promoción'}</h3>
-
-            {error && <div className="message error-message">{error}</div>}
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Nombre *</label>
-                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Happy Hour viernes" />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Descripción</label>
-                <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción opcional" />
-              </div>
-
-              <div className="form-group">
-                <label>Tipo de Promoción *</label>
-                <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value, valor: '', hora_inicio: '', hora_fin: '' })}>
-                  {Object.entries(TIPOS).map(([key, t]) => (
-                    <option key={key} value={key}>{t.icon} {t.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Aplicación</label>
-                <select value={form.automatica ? 'auto' : 'manual'} onChange={e => setForm({ ...form, automatica: e.target.value === 'auto' })}>
-                  <option value="auto">⚡ Automática (si califica)</option>
-                  <option value="manual">👆 Manual (cajero la aplica)</option>
-                </select>
-              </div>
-
-              {/* Descuento % */}
-              {(form.tipo === 'descuento_porcentaje' || form.tipo === 'happy_hour') && (
-                <div className="form-group">
-                  <label>Descuento (%) *</label>
-                  <input
-                    type="number" min="1" max="100" step="1"
-                    value={form.valor}
-                    onChange={e => setForm({ ...form, valor: e.target.value })}
-                    placeholder="Ej: 20"
-                  />
-                </div>
-              )}
-
-              {/* Horario happy hour */}
-              {form.tipo === 'happy_hour' && (
-                <>
-                  <div className="form-group">
-                    <label>Hora Inicio *</label>
-                    <input type="time" value={form.hora_inicio} onChange={e => setForm({ ...form, hora_inicio: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Hora Fin *</label>
-                    <input type="time" value={form.hora_fin} onChange={e => setForm({ ...form, hora_fin: e.target.value })} />
-                  </div>
-                </>
-              )}
-
-              {/* Aplica a producto o categoría */}
-              {form.tipo !== 'dos_x_uno' && form.tipo !== 'tres_x_dos' && (
-                <>
-                  <div className="form-group">
-                    <label>Aplica a Producto (opcional)</label>
-                    <select value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value, categoria_id: '' })}>
-                      <option value="">Todos los productos</option>
-                      {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                    </select>
-                  </div>
-                  {!form.producto_id && (
-                    <div className="form-group">
-                      <label>O Aplica a Categoría (opcional)</label>
-                      <select value={form.categoria_id} onChange={e => setForm({ ...form, categoria_id: e.target.value })}>
-                        <option value="">Todas las categorías</option>
-                        {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* 2x1 y 3x2 aplican a un producto específico */}
-              {(form.tipo === 'dos_x_uno' || form.tipo === 'tres_x_dos') && (
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Producto al que aplica (opcional)</label>
-                  <select value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value })}>
-                    <option value="">Todos los productos</option>
-                    {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} — ${Number(p.precio).toFixed(2)}</option>)}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Preview */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', marginTop: '16px' }}>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 6px' }}>Vista previa:</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '20px' }}>{tipoInfo(form.tipo).icon}</span>
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: tipoInfo(form.tipo).color, textTransform: 'uppercase' }}>
-                    {tipoInfo(form.tipo).label}
-                  </span>
-                  {form.valor && <span style={{ fontSize: '13px', color: 'var(--text)', marginLeft: '8px' }}>— {form.valor}% OFF</span>}
-                  {form.tipo === 'dos_x_uno' && <span style={{ fontSize: '13px', color: 'var(--text)', marginLeft: '8px' }}>— Lleva 2, paga 1</span>}
-                  {form.tipo === 'tres_x_dos' && <span style={{ fontSize: '13px', color: 'var(--text)', marginLeft: '8px' }}>— Lleva 3, paga 2</span>}
-                  {form.tipo === 'happy_hour' && form.hora_inicio && (
-                    <span style={{ fontSize: '13px', color: 'var(--text)', marginLeft: '8px' }}>— {form.hora_inicio} a {form.hora_fin}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                className="btn"
-                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                onClick={() => setShowModal(false)}
-              >Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={guardar} disabled={guardando}>
-                {guardando ? 'Guardando...' : 'Guardar Promoción'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={!!deleteConfirm}
+        title="Eliminar promoción"
+        message={`¿Eliminar la promoción "${deleteConfirm?.nombre}"?`}
+        confirmText="Eliminar"
+        danger
+        onConfirm={confirmEliminar}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

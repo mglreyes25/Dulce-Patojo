@@ -1,23 +1,27 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const INACTIVIDAD_MS = 30 * 60 * 1000; // 30 minutos
+const INACTIVIDAD_DEFAULT_MS = 30 * 60 * 1000; // 30 minutos
 
-export function useInactividad() {
+export function useInactividad(timeout = INACTIVIDAD_DEFAULT_MS, onTimeout) {
   const navigate = useNavigate();
 
   const cerrarSesion = useCallback(() => {
-    localStorage.clear();
-    navigate('/login');
-  }, [navigate]);
+    if (onTimeout) {
+      onTimeout();
+    } else {
+      localStorage.clear();
+      navigate('/login');
+    }
+  }, [navigate, onTimeout]);
 
   useEffect(() => {
-    let timer = setTimeout(cerrarSesion, INACTIVIDAD_MS);
+    let timer = setTimeout(cerrarSesion, timeout);
 
     const resetTimer = () => {
       clearTimeout(timer);
       localStorage.setItem('lastActivity', Date.now().toString());
-      timer = setTimeout(cerrarSesion, INACTIVIDAD_MS);
+      timer = setTimeout(cerrarSesion, timeout);
     };
 
     const eventos = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
@@ -27,5 +31,5 @@ export function useInactividad() {
       clearTimeout(timer);
       eventos.forEach(e => window.removeEventListener(e, resetTimer));
     };
-  }, [cerrarSesion]);
+  }, [cerrarSesion, timeout]);
 }

@@ -1,4 +1,48 @@
 ﻿const supabase = require('../config/database');
+const { emitNuevoPedido, emitCambioEstado, emitPedidoListo } = require('../config/socketEmitter');
+
+// ── HELPER: Descontar stock de ingredientes por receta ──────────
+const descontarStockPorReceta = async (productoId, cantidad, descripcion, usuarioId) => {
+  try {
+    const { data: recetas } = await supabase
+      .from('recetas')
+      .select('*, ingredientes(nombre)')
+      .eq('producto_id', productoId);
+
+    if (recetas && recetas.length > 0) {
+      for (const r of recetas) {
+        const resta = Number(r.cantidad) * Number(cantidad);
+        const { data: ing } = await supabase
+          .from('ingredientes')
+          .select('stock')
+          .eq('id', r.ingrediente_id)
+          .single();
+
+        if (ing) {
+          const stockAnterior = Number(ing.stock);
+          const stockNuevo = Math.max(0, stockAnterior - resta);
+
+          await supabase.from('ingredientes')
+            .update({ stock: stockNuevo, actualizado_en: new Date().toISOString() })
+            .eq('id', r.ingrediente_id);
+
+          await supabase.from('movimientos_ingredientes').insert({
+            ingrediente_id: r.ingrediente_id,
+            tipo: 'salida',
+            cantidad: resta,
+            stock_anterior: stockAnterior,
+            stock_nuevo: stockNuevo,
+            descripcion: `${descripcion} — ${r.ingredientes?.nombre || ''}`,
+            referencia_tipo: 'pedido',
+            usuario_id: usuarioId,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`Error descontando stock por receta (producto ${productoId}):`, e);
+  }
+};
 
 // ── HELPER: Descontar stock de un producto ──────────────────────
 const descontarStock = async (productoId, cantidad, descripcion, usuarioId) => {
@@ -71,7 +115,11 @@ const obtenerPedidos = async (req, res) => {
       .select('*, usuarios(nombre), mesa:mesas(numero), pedido_items(*)')
       .order('creado_en', { ascending: false });
 
-    if (estado) query = query.eq('estado', estado);
+    if (estado) {
+      const estados = estado.split(',').map(s => s.trim()).filter(Boolean);
+      if (estados.length === 1) query = query.eq('estado', estados[0]);
+      else query = query.in('estado', estados);
+    }
     if (fecha) query = query.gte('creado_en', fecha + 'T00:00:00Z').lte('creado_en', fecha + 'T23:59:59Z');
     if (limite) query = query.limit(Number(limite));
 
@@ -129,35 +177,11 @@ const crearPedido = async (req, res) => {
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'El pedido debe tener al menos un item' });
   }
-  if (!['para_llevar', 'en_mesa', 'para_recoger'].includes(tipo)) {
+  if (!['para_llevar', 'en_mesa', 'para_recoger', 'domicilio'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo de pedido inválido' });
   }
   if (tipo === 'en_mesa' && !mesa_id) {
     return res.status(400).json({ error: 'Debe seleccionar una mesa para pedidos en mesa' });
-  }
-
-  // ── Ocupar mesa INMEDIATAMENTE como operación independiente ──
-  if (mesa_id) {
-    const apiUrl = process.env.SUPABASE_URL;
-    const apiKey = process.env.SUPABASE_KEY;
-    console.log(`🪑 [DIRECTO] Ocupando mesa ID ${mesa_id}...`);
-    const resp = await fetch(`${apiUrl}/rest/v1/mesas?id=eq.${mesa_id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
-        'Prefer': 'return=representation',
-      },
-      body: JSON.stringify({ estado: 'ocupada' }),
-    });
-    const result = await resp.json();
-    console.log(`📦 [DIRECTO] Resultado mesa update:`, JSON.stringify(result));
-    if (!resp.ok) {
-      console.error('❌ [DIRECTO] Error al ocupar mesa:', result);
-    } else {
-      console.log('✅ [DIRECTO] Mesa ocupada correctamente');
-    }
   }
 
   try {
@@ -168,7 +192,24 @@ const crearPedido = async (req, res) => {
     });
 
     const descuento = Number(promociones_aplicadas?.reduce((sum, p) => sum + Number(p.monto || 0), 0) || 0);
-    const total = Math.max(0, subtotal - descuento);
+    const baseImponible = Math.max(0, subtotal - descuento);
+
+    // Obtener tasa de IVA activa
+    const { data: ivaReg } = await supabase
+      .from('impuestos').select('tasa').eq('activo', true).limit(1).maybeSingle();
+    const ivaTasa = ivaReg ? Number(ivaReg.tasa) : 0.13;
+
+    // Calcular IVA: si el item tiene exento_iva, no se le aplica
+    let iva = 0;
+    for (const item of items) {
+      const { data: prod } = await supabase
+        .from('productos').select('exento_iva').eq('id', item.id).maybeSingle();
+      if (!prod?.exento_iva) {
+        iva += Number(item.precio) * Number(item.cantidad) * ivaTasa;
+      }
+    }
+    iva = Math.round(iva * 100) / 100;
+    const totalConIva = baseImponible + iva;
 
     // Obtener próximo número de ticket
     const hoy = new Date().toISOString().split('T')[0];
@@ -189,7 +230,8 @@ const crearPedido = async (req, res) => {
         tipo, mesa_id: mesa_id || null,
         cliente_nombre: cliente_nombre || null,
         estado: 'recibido',
-        subtotal, descuento, total,
+        subtotal, descuento, total: baseImponible,
+        iva, total_con_iva: totalConIva,
         usuario_id: req.user.id,
         notas: notas || null,
       })
@@ -226,11 +268,21 @@ const crearPedido = async (req, res) => {
     });
     if (ticketError) console.error('Error registrando ticket:', ticketError);
 
+    // ── Ocupar mesa (dentro del try-catch para rollback) ─────────
+    if (mesa_id) {
+      const { error: mesaError } = await supabase
+        .from('mesas')
+        .update({ estado: 'ocupada' })
+        .eq('id', mesa_id);
+      if (mesaError) console.error('Error al ocupar mesa:', mesaError);
+    }
+
     // ── Descontar stock de productos ──────────────────────────────
     for (const item of items) {
       try {
         if (item.tipo === 'producto') {
           await descontarStock(item.id, item.cantidad, `Venta pedido #${numeroTicket}`, req.user.id);
+          await descontarStockPorReceta(item.id, item.cantidad, `Venta pedido #${numeroTicket}`, req.user.id);
         } else if (item.tipo === 'combo') {
           const { data: comboProds } = await supabase
             .from('combo_productos')
@@ -240,6 +292,7 @@ const crearPedido = async (req, res) => {
             for (const cp of comboProds) {
               const cant = Number(cp.cantidad) * Number(item.cantidad);
               await descontarStock(cp.producto_id, cant, `Venta combo #${item.id} — pedido #${numeroTicket}`, req.user.id);
+              await descontarStockPorReceta(cp.producto_id, cant, `Venta combo #${item.id} — pedido #${numeroTicket}`, req.user.id);
             }
           }
         } else if (item.tipo === 'promocion') {
@@ -250,6 +303,7 @@ const crearPedido = async (req, res) => {
             .maybeSingle();
           if (promo?.producto_id) {
             await descontarStock(promo.producto_id, Number(item.cantidad), `Venta promoción #${item.id} — pedido #${numeroTicket}`, req.user.id);
+            await descontarStockPorReceta(promo.producto_id, Number(item.cantidad), `Venta promoción #${item.id} — pedido #${numeroTicket}`, req.user.id);
           }
         }
       } catch (stockErr) {
@@ -263,12 +317,14 @@ const crearPedido = async (req, res) => {
       descripcion: `Pedido #${numeroTicket} — ${items.length} item(s), total: $${total}`,
     });
 
-    // Retornar pedido completo con items
+    // Socket: notificar a cocina
     const { data: pedidoCompleto } = await supabase
       .from('pedidos')
       .select('*, pedido_items(*)')
       .eq('id', pedido.id)
       .single();
+
+    if (pedidoCompleto) emitNuevoPedido(pedidoCompleto);
 
     res.status(201).json(pedidoCompleto);
   } catch (e) {
@@ -341,6 +397,10 @@ const cambiarEstadoPedido = async (req, res) => {
       descripcion: `Pedido #${pedido.numero_ticket}: ${pedido.estado} → ${estado}`,
     });
 
+    // Socket: notificar cambio de estado
+    emitCambioEstado(id, estado, pedido.numero_ticket);
+    if (estado === 'listo') emitPedidoListo({ ...data, numero_ticket: pedido.numero_ticket });
+
     res.json(data);
   } catch (e) {
     console.error('Error cambiando estado:', e);
@@ -351,10 +411,10 @@ const cambiarEstadoPedido = async (req, res) => {
 // ── PROCESAR PAGO ──────────────────────────────────────────────
 const procesarPago = async (req, res) => {
   const { id } = req.params;
-  const { metodo_pago: metodo, monto_recibido } = req.body;
+  const { metodo_pago: metodo, monto_recibido, propina } = req.body;
 
-  if (!['efectivo', 'tarjeta'].includes(metodo)) {
-    return res.status(400).json({ error: 'Método de pago inválido. Use: efectivo, tarjeta' });
+  if (!['efectivo', 'tarjeta', 'qr', 'billetera_digital', 'transferencia'].includes(metodo)) {
+    return res.status(400).json({ error: 'Método de pago inválido' });
   }
 
   try {
@@ -367,21 +427,27 @@ const procesarPago = async (req, res) => {
     if (pedido.estado === 'pagado') return res.status(400).json({ error: 'El pedido ya está pagado' });
     if (pedido.estado === 'cancelado') return res.status(400).json({ error: 'El pedido está cancelado' });
 
-    const total = Number(pedido.total);
-    const recibido = metodo === 'efectivo' ? Number(monto_recibido) : total;
+    const total = Number(pedido.total_con_iva || pedido.total);
+    const recibo = metodo === 'efectivo' ? Number(monto_recibido) : total;
+    const tip = Math.max(0, Number(propina || 0));
+    const totalConPropina = total + tip;
 
-    if (metodo === 'efectivo' && Number(monto_recibido) < total) {
-      return res.status(400).json({ error: `Monto insuficiente. Total: $${total}, Recibido: $${monto_recibido}` });
+    if (metodo === 'efectivo' && Number(monto_recibido) < totalConPropina) {
+      return res.status(400).json({ error: `Monto insuficiente. Total: $${totalConPropina.toFixed(2)}, Recibido: $${monto_recibido}` });
     }
 
-    const cambio = Math.max(0, recibido - total);
+    const cambio = Math.max(0, recibo - totalConPropina);
 
     // Registrar pago
     const { data: pago, error: pagoError } = await supabase
       .from('pagos')
       .insert({
         pedido_id: Number(id),
-        metodo, monto_recibido: recibido, cambio, total,
+        metodo, monto_recibido: recibo, cambio,
+        total, propina: tip,
+        iva: pedido.iva || 0,
+        subtotal_sin_iva: pedido.subtotal || 0,
+        total_con_iva: total,
         usuario_id: req.user.id,
       })
       .select()
@@ -403,7 +469,7 @@ const procesarPago = async (req, res) => {
 
     await supabase.from('bitacora_permisos').insert({
       usuario_id: req.user.id, accion: 'PAGO',
-      descripcion: `Pago pedido #${pedido.numero_ticket} — ${metodo} — $${total}`,
+      descripcion: `Pago pedido #${pedido.numero_ticket} — ${metodo} — $${total}${tip > 0 ? ` + $${tip} propina` : ''}`,
     });
 
     res.json({ pedido: pedidoActualizado, pago });
@@ -470,9 +536,48 @@ const probarMesa = async (req, res) => {
   }
 };
 
+// ── RESUMEN PARA DASHBOARD ──────────────────────────────────────
+const obtenerResumen = async (req, res) => {
+  try {
+    const hoy = new Date().toISOString().split('T')[0];
+
+    const { count: pedidosHoy } = await supabase
+      .from('pedidos')
+      .select('*', { count: 'exact', head: true })
+      .gte('creado_en', hoy);
+
+    const { data: ventasHoy } = await supabase
+      .from('pagos')
+      .select('total')
+      .gte('creado_en', hoy);
+
+    const ventasTotales = ventasHoy?.reduce((sum, p) => sum + Number(p.total), 0) || 0;
+
+    const { count: prodActivos } = await supabase
+      .from('productos')
+      .select('*', { count: 'exact', head: true })
+      .eq('activo', true);
+
+    const { count: usersActivos } = await supabase
+      .from('usuarios')
+      .select('*', { count: 'exact', head: true })
+      .eq('activo', true);
+
+    res.json({
+      pedidos_hoy: pedidosHoy || 0,
+      ventas_totales: ventasTotales,
+      productos_activos: prodActivos || 0,
+      usuarios_activos: usersActivos || 0,
+    });
+  } catch (e) {
+    console.error('Error en resumen:', e);
+    res.status(500).json({ error: 'Error al obtener resumen' });
+  }
+};
+
 module.exports = {
   obtenerPedidos, obtenerPedidoPorId, obtenerProximoTicket,
   crearPedido, cambiarEstadoPedido,
   procesarPago, obtenerTicket, reimprimirTicket,
-  probarMesa,
+  probarMesa, obtenerResumen,
 };

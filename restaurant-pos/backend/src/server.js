@@ -1,4 +1,5 @@
-﻿const express = require('express');
+﻿const http = require('http');
+const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -9,6 +10,10 @@ const promocionesRoutes = require('./routes/promocionesRoutes');
 const inventarioRoutes  = require('./routes/inventarioRoutes');
 const pedidosRoutes     = require('./routes/pedidosRoutes');
 const mesasRoutes       = require('./routes/mesasRoutes');
+const ingredientesRoutes = require('./routes/ingredientesRoutes');
+const recetasRoutes     = require('./routes/recetasRoutes');
+const proveedoresRoutes = require('./routes/proveedoresRoutes');
+const { initSocket }    = require('./config/socket');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,10 +27,16 @@ app.use('/productos',   productosRoutes);
 app.use('/promociones', promocionesRoutes);
 app.use('/inventario',  inventarioRoutes);
 app.use('/pedidos',     pedidosRoutes);
-app.use('/mesas',       mesasRoutes);
+app.use('/mesas',         mesasRoutes);
+app.use('/ingredientes',  ingredientesRoutes);
+app.use('/recetas',       recetasRoutes);
+app.use('/proveedores',   proveedoresRoutes);
 
 app.get('/', (req, res) => res.json({ message: '🚀 Backend Restaurant POS funcionando' }));
 
-app.listen(PORT, () => {
-  console.log(`✅ Servidor corriendo en puerto ${PORT}`);
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
+  console.log(`✅ Servidor corriendo en puerto ${PORT} con WebSocket`);
 });

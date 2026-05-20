@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 
+const API_URL = 'http://localhost:5000';
+
 function Dashboard() {
   const [usuario, setUsuario] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   useInactividad();
 
@@ -13,6 +18,19 @@ function Dashboard() {
     if (!u) { navigate('/login'); return; }
     setUsuario(JSON.parse(u));
   }, [navigate]);
+
+  useEffect(() => {
+    if (!usuario) return;
+    const token = localStorage.getItem('token');
+    if (!token) { navigate('/login'); return; }
+
+    axios.get(`${API_URL}/pedidos/resumen`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => setStats(res.data))
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
+  }, [usuario, navigate]);
 
   if (!usuario) return null;
 
@@ -35,26 +53,28 @@ function Dashboard() {
 
         <div className="stats-grid">
           <div className="stat-card">
-            <div className="stat-icon">📦</div>
-            <div className="stat-value">0</div>
+            <div className="stat-icon">☕</div>
+            <div className="stat-value">{loading ? '—' : stats?.pedidos_hoy ?? 0}</div>
             <div className="stat-label">Pedidos Hoy</div>
           </div>
           {usuario.rol === 'Admin' && (
             <div className="stat-card">
               <div className="stat-icon">💰</div>
-              <div className="stat-value">$0.00</div>
+              <div className="stat-value">
+                {loading ? '—' : `$${(stats?.ventas_totales ?? 0).toFixed(2)}`}
+              </div>
               <div className="stat-label">Ventas Totales</div>
             </div>
           )}
           <div className="stat-card">
-            <div className="stat-icon">🍔</div>
-            <div className="stat-value">—</div>
+            <div className="stat-icon">🧁</div>
+            <div className="stat-value">{loading ? '—' : stats?.productos_activos ?? '—'}</div>
             <div className="stat-label">Productos Activos</div>
           </div>
           {usuario.rol === 'Admin' && (
             <div className="stat-card">
               <div className="stat-icon">👥</div>
-              <div className="stat-value">—</div>
+              <div className="stat-value">{loading ? '—' : stats?.usuarios_activos ?? '—'}</div>
               <div className="stat-label">Usuarios Activos</div>
             </div>
           )}
@@ -68,12 +88,12 @@ function Dashboard() {
             </Link>
           )}
           <Link to="/productos" className="acceso-card">
-            <span className="acceso-icon">🍔</span>
+            <span className="acceso-icon">🧁</span>
             <span className="acceso-label">Productos</span>
           </Link>
           {['Admin', 'Cajero'].includes(usuario.rol) && (
             <Link to="/caja" className="acceso-card">
-              <span className="acceso-icon">🧾</span>
+              <span className="acceso-icon">☕</span>
               <span className="acceso-label">Caja</span>
             </Link>
           )}
@@ -84,18 +104,16 @@ function Dashboard() {
             </Link>
           )}
           {['Admin', 'Cocinero'].includes(usuario.rol) && (
-            <div className="acceso-card disabled">
+            <Link to="/cocina" className="acceso-card">
               <span className="acceso-icon">👨‍🍳</span>
               <span className="acceso-label">Cocina</span>
-              <span className="acceso-soon">Sprint 4</span>
-            </div>
+            </Link>
           )}
           {['Admin', 'Despachador'].includes(usuario.rol) && (
-            <div className="acceso-card disabled">
+            <Link to="/despacho" className="acceso-card">
               <span className="acceso-icon">🚀</span>
               <span className="acceso-label">Despacho</span>
-              <span className="acceso-soon">Sprint 4</span>
-            </div>
+            </Link>
           )}
           {usuario.rol === 'Admin' && (
             <div className="acceso-card disabled">

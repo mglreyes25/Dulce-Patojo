@@ -34,7 +34,7 @@ const validarPasswordEstricta = (pwd) => {
     return 'Debe contener al menos una letra minúscula';
   if (!/[0-9]/.test(pwd))
     return 'Debe contener al menos un número';
-  if (!/[!@#$%^&*()\-_=+{}\[\]|;:',.<>?/`~\\"\\\\]/.test(pwd))
+  if (!/[!@#$%^&*()\-_=+{}\[\]|;:',.<>?/`~\\"]/.test(pwd))
     return 'Debe contener al menos un carácter especial (!@#$%...)';
   return null;
 };
