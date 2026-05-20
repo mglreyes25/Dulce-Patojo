@@ -2,11 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
+import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
-import PasswordInput from '../components/PasswordInput';
-import { validarPassword } from '../utils/password';
-
-const API_URL = 'http://localhost:5000';
 
 const rolBadge = (rol) => {
   const map = {

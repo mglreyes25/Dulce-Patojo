@@ -5,8 +5,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
-
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 function Ingredientes() {
   const [ingredientes, setIngredientes] = useState([]);

@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
+import { API_URL, SOCKET_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
-
-const API = 'http://localhost:5000';
-const SOCKET = 'http://localhost:5000';
 
 function Despacho() {
   const [usuario, setUsuario] = useState(null);
@@ -30,7 +28,7 @@ function Despacho() {
 
   const cargarPedidos = async () => {
     try {
-      const res = await axios.get(`${API}/pedidos`, {
+      const res = await axios.get(`${API_URL}/pedidos`, {
         params: { estado: 'listo,entregado' },
         headers,
       });
@@ -51,7 +49,7 @@ function Despacho() {
 
   useEffect(() => {
     if (!usuario) return;
-    const socket = io(SOCKET);
+    const socket = io(SOCKET_URL);
     socket.emit('join', 'Despachador');
 
     socket.on('pedido_listo', (pedido) => {
@@ -68,7 +66,7 @@ function Despacho() {
 
   const entregar = async (id) => {
     try {
-      await axios.patch(`${API}/pedidos/${id}/estado`, { estado: 'entregado' }, { headers });
+      await axios.patch(`${API_URL}/pedidos/${id}/estado`, { estado: 'entregado' }, { headers });
       addToast('Pedido marcado como entregado', 'success');
     } catch {
       addToast('Error al entregar pedido', 'error');

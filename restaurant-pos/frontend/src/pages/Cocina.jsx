@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
+import { API_URL, SOCKET_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
-
-const API = 'http://localhost:5000';
-const SOCKET = 'http://localhost:5000';
 
 const ESTADOS = {
   pendiente:      { label: 'Pendiente',     color: '#f1c40f', icon: '⏳' },
@@ -40,7 +38,7 @@ function Cocina() {
 
   const cargarPedidos = async () => {
     try {
-      const res = await axios.get(`${API}/pedidos`, {
+      const res = await axios.get(`${API_URL}/pedidos`, {
         params: { estado: ['recibido', 'en_preparacion', 'listo'].join(',') },
         headers,
       });
@@ -61,7 +59,7 @@ function Cocina() {
 
   useEffect(() => {
     if (!usuario) return;
-    const socket = io(SOCKET);
+    const socket = io(SOCKET_URL);
     socket.emit('join', 'Cocinero');
 
     socket.on('nuevo_pedido', (pedido) => {
@@ -81,7 +79,7 @@ function Cocina() {
 
   const cambiarEstado = async (id, nuevoEstado) => {
     try {
-      await axios.patch(`${API}/pedidos/${id}/estado`, { estado: nuevoEstado }, { headers });
+      await axios.patch(`${API_URL}/pedidos/${id}/estado`, { estado: nuevoEstado }, { headers });
       setPedidos(prev => prev.map(p => p.id === id ? { ...p, estado: nuevoEstado } : p));
     } catch {
       addToast('Error al cambiar estado', 'error');

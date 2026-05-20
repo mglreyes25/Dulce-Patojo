@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
-
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 const ESTADO_MESA = {
   disponible: { label: 'Disponible', color: '#27ae60', icon: '\uD83D\uDFE2' },

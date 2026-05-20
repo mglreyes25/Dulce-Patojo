@@ -3,9 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
-import ConfirmModal from '../components/ConfirmModal';
-
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 const TIPOS = {
   descuento_porcentaje: { label: 'Descuento %',    icon: '🏷️', color: '#3498db', bg: 'rgba(52,152,219,0.15)' },

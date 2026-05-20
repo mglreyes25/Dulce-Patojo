@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import PasswordInput from '../components/PasswordInput';
 
-const API_URL = 'http://localhost:5000';
+import { API_URL } from '../utils/api';
 
 const redirigirPorRol = (rol, navigate) => {
   switch (rol) {

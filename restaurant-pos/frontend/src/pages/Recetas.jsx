@@ -4,8 +4,7 @@ import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
-
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 function Recetas() {
   const [productos, setProductos]       = useState([]);

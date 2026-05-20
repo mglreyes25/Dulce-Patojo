@@ -5,7 +5,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
 
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 const btnCantidad = {
   width: '24px', height: '24px', borderRadius: '5px',

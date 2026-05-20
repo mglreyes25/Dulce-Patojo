@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
-
-const API = 'http://localhost:5000';
+import API from '../utils/api';
 
 export default function Inventario() {
   const [inventario, setInventario]     = useState([]);

@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import PasswordInput from '../components/PasswordInput';
 import { validarPassword, fortalezaPassword } from '../utils/password';
-
-const API_URL = 'http://localhost:5000';
+import { API_URL } from '../utils/api';
 
 function Register() {
   const [form, setForm] = useState({

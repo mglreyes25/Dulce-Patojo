@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
+import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
-
-const API_URL = 'http://localhost:5000';
 
 function Dashboard() {
   const [usuario, setUsuario] = useState(null);
