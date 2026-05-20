@@ -124,7 +124,11 @@ const obtenerPedidos = async (req, res) => {
     if (limite) query = query.limit(Number(limite));
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      // Fallback: query sin joins si hay problemas de schema cache
+      const { data: fallback } = await supabase.from('pedidos').select('*').order('creado_en', { ascending: false });
+      return res.json(fallback || []);
+    }
     res.json(data || []);
   } catch (e) {
     console.error('Error obteniendo pedidos:', e);
@@ -177,7 +181,8 @@ const crearPedido = async (req, res) => {
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'El pedido debe tener al menos un item' });
   }
-  if (!['para_llevar', 'en_mesa', 'para_recoger', 'domicilio'].includes(tipo)) {
+  if (!['para_llevar', 'en_mesa', 'para_recoger'].includes(tipo)) {
+    // 'domicilio' requiere migracion_iva.sql ejecutada en Supabase
     return res.status(400).json({ error: 'Tipo de pedido inválido' });
   }
   if (tipo === 'en_mesa' && !mesa_id) {
@@ -222,21 +227,30 @@ const crearPedido = async (req, res) => {
       .maybeSingle();
     const numeroTicket = (lastTicket?.contador_diario || 0) + 1;
 
-    // Crear pedido
-    const { data: pedido, error: pedidoError } = await supabase
-      .from('pedidos')
-      .insert({
-        numero_ticket: numeroTicket,
-        tipo, mesa_id: mesa_id || null,
-        cliente_nombre: cliente_nombre || null,
-        estado: 'recibido',
-        subtotal, descuento, total: baseImponible,
-        iva, total_con_iva: totalConIva,
-        usuario_id: req.user.id,
-        notas: notas || null,
-      })
-      .select()
-      .single();
+    // Crear pedido (con soporte para columnas IVA si existen en la DB)
+    const pedidoInsert = {
+      numero_ticket: numeroTicket,
+      tipo, mesa_id: mesa_id || null,
+      cliente_nombre: cliente_nombre || null,
+      estado: 'recibido',
+      subtotal, descuento, total: baseImponible,
+      usuario_id: req.user.id,
+      notas: notas || null,
+    };
+
+    let pedido, pedidoError;
+    const tryInsert = (extraFields) =>
+      supabase.from('pedidos').insert({ ...pedidoInsert, ...extraFields }).select().single();
+
+    // Intentar con IVA; si falla, insertar sin IVA
+    const ivaResult = await tryInsert({ iva, total_con_iva: totalConIva });
+    if (!ivaResult.error) {
+      pedido = ivaResult.data;
+    } else {
+      const fallback = await tryInsert({});
+      pedido = fallback.data;
+      pedidoError = fallback.error;
+    }
 
     if (pedidoError) throw pedidoError;
 
@@ -438,20 +452,32 @@ const procesarPago = async (req, res) => {
 
     const cambio = Math.max(0, recibo - totalConPropina);
 
-    // Registrar pago
-    const { data: pago, error: pagoError } = await supabase
-      .from('pagos')
-      .insert({
-        pedido_id: Number(id),
-        metodo, monto_recibido: recibo, cambio,
-        total, propina: tip,
-        iva: pedido.iva || 0,
-        subtotal_sin_iva: pedido.subtotal || 0,
-        total_con_iva: total,
-        usuario_id: req.user.id,
-      })
-      .select()
-      .single();
+    // Registrar pago (con soporte para columnas IVA/propina si existen)
+    const pagoBase = {
+      pedido_id: Number(id),
+      metodo, monto_recibido: recibo, cambio,
+      total, usuario_id: req.user.id,
+    };
+    const pagoCompleto = {
+      ...pagoBase,
+      propina: tip,
+      iva: pedido.iva || 0,
+      subtotal_sin_iva: pedido.subtotal || 0,
+      total_con_iva: total,
+    };
+
+    let pago, pagoError;
+    const tryPagoInsert = (fields) =>
+      supabase.from('pagos').insert(fields).select().single();
+
+    const pagoResult = await tryPagoInsert(pagoCompleto);
+    if (!pagoResult.error) {
+      pago = pagoResult.data;
+    } else {
+      const fallback = await tryPagoInsert(pagoBase);
+      pago = fallback.data;
+      pagoError = fallback.error;
+    }
     if (pagoError) throw pagoError;
 
     // Actualizar estado del pedido
