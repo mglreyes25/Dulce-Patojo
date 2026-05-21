@@ -1,8 +1,70 @@
 ﻿import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  BarChart3, Users, CakeSlice, Package, Salad, ClipboardList,
+  PartyPopper, Coffee, Map, ChefHat, Rocket, TrendingUp, LogOut,
+  Menu, X,
+} from 'lucide-react';
 
 const rolColor = (rol) =>
   ({ Admin: 'warning', Cajero: 'primary', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
+
+const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogout, onLinkClick }) => (
+  <>
+    <div className="sidebar-logo">
+      {!collapsed && (
+        <a href="/dashboard" style={{ textDecoration: 'none' }}>
+          <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 48, display: 'block' }} />
+        </a>
+      )}
+    </div>
+
+    <nav>
+      <ul>
+        {navItems.map((item) => {
+          const IconComp = item.icon;
+          return (
+            <li key={item.key} title={collapsed ? item.label : undefined}>
+              {item.disabled ? (
+                <a href={item.to} className="nav-disabled" onClick={(e) => e.preventDefault()}>
+                  <span className="nav-icon"><IconComp size={18} /></span>
+                  {!collapsed && <span className="nav-label">{item.label}</span>}
+                  {!collapsed && <span className="nav-soon">Pronto</span>}
+                </a>
+              ) : (
+                <Link
+                  to={item.to}
+                  className={activeRoute === item.key ? 'active' : ''}
+                  onClick={onLinkClick}
+                >
+                  <span className="nav-icon"><IconComp size={18} /></span>
+                  {!collapsed && <span className="nav-label">{item.label}</span>}
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+
+    <div className="sidebar-footer">
+      {!collapsed && (
+        <div className="sidebar-user">
+          <span className="sidebar-user-name">{usuario?.nombre}</span>
+          <span className={`badge badge-${rolColor(usuario?.rol)}`}>{usuario?.rol}</span>
+        </div>
+      )}
+      <button
+        className="btn-logout"
+        onClick={handleLogout}
+        title={collapsed ? 'Cerrar Sesión' : undefined}
+      >
+        <LogOut size={16} style={{ marginRight: collapsed ? 0 : 8, verticalAlign: 'middle' }} />
+        {!collapsed && ' Cerrar Sesión'}
+      </button>
+    </div>
+  </>
+);
 
 export default function Sidebar({ usuario, activeRoute }) {
   const navigate = useNavigate();
@@ -20,90 +82,37 @@ export default function Sidebar({ usuario, activeRoute }) {
   const handleLogout = () => { localStorage.clear(); navigate('/login'); };
 
   const navItems = [
-    { to: '/dashboard', icon: '📊', label: 'Dashboard', key: 'dashboard' },
+    { to: '/dashboard', icon: BarChart3, label: 'Dashboard', key: 'dashboard' },
     ...(usuario?.rol === 'Admin'
-      ? [{ to: '/usuarios', icon: '👥', label: 'Usuarios', key: 'usuarios' }]
+      ? [{ to: '/usuarios', icon: Users, label: 'Usuarios', key: 'usuarios' }]
       : []),
-    { to: '/productos', icon: '🧁', label: 'Productos', key: 'productos' },
+    { to: '/productos', icon: CakeSlice, label: 'Productos', key: 'productos' },
     ...(usuario?.rol === 'Admin'
-      ? [{ to: '/inventario', icon: '📦', label: 'Inventario', key: 'inventario' }]
-      : []),
-    ...(usuario?.rol === 'Admin'
-      ? [{ to: '/ingredientes', icon: '🥗', label: 'Ingredientes', key: 'ingredientes' }]
+      ? [{ to: '/inventario', icon: Package, label: 'Inventario', key: 'inventario' }]
       : []),
     ...(usuario?.rol === 'Admin'
-      ? [{ to: '/recetas', icon: '📋', label: 'Recetas', key: 'recetas' }]
+      ? [{ to: '/ingredientes', icon: Salad, label: 'Ingredientes', key: 'ingredientes' }]
+      : []),
+    ...(usuario?.rol === 'Admin'
+      ? [{ to: '/recetas', icon: ClipboardList, label: 'Recetas', key: 'recetas' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
-      ? [{ to: '/promociones', icon: '🎉', label: 'Promociones', key: 'promociones' }]
+      ? [{ to: '/promociones', icon: PartyPopper, label: 'Promociones', key: 'promociones' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
-      ? [{ to: '/caja', icon: '☕', label: 'Caja', key: 'caja' }]
+      ? [{ to: '/caja', icon: Coffee, label: 'Caja', key: 'caja' }]
       : []),
     ...(['Admin', 'Cajero'].includes(usuario?.rol)
-      ? [{ to: '/mesas', icon: '🗺️', label: 'Mesas', key: 'mesas' }]
+      ? [{ to: '/mesas', icon: Map, label: 'Mesas', key: 'mesas' }]
       : []),
     ...(['Admin', 'Cocinero'].includes(usuario?.rol)
-      ? [{ to: '/cocina', icon: '👨‍🍳', label: 'Cocina', key: 'cocina' }]
+      ? [{ to: '/cocina', icon: ChefHat, label: 'Cocina', key: 'cocina' }]
       : []),
     ...(['Admin', 'Despachador'].includes(usuario?.rol)
-      ? [{ to: '/despacho', icon: '🚀', label: 'Despacho', key: 'despacho' }]
+      ? [{ to: '/despacho', icon: Rocket, label: 'Despacho', key: 'despacho' }]
       : []),
-    { to: '#reportes', icon: '📈', label: 'Reportes', key: 'reportes', disabled: true },
+    { to: '#reportes', icon: TrendingUp, label: 'Reportes', key: 'reportes', disabled: true },
   ];
-
-  const SidebarContent = ({ onLinkClick }) => (
-    <>
-      <div className="sidebar-logo">
-        {!collapsed && (
-          <a href="/dashboard" style={{ textDecoration: 'none' }}>
-            <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 48, display: 'block' }} />
-          </a>
-        )}
-      </div>
-
-      <nav>
-        <ul>
-          {navItems.map((item) => (
-            <li key={item.key} title={collapsed ? item.label : undefined}>
-              {item.disabled ? (
-                <a href={item.to} className="nav-disabled" onClick={(e) => e.preventDefault()}>
-                  <span className="nav-icon">{item.icon}</span>
-                  {!collapsed && <span className="nav-label">{item.label}</span>}
-                  {!collapsed && <span className="nav-soon">Pronto</span>}
-                </a>
-              ) : (
-                <Link
-                  to={item.to}
-                  className={activeRoute === item.key ? 'active' : ''}
-                  onClick={onLinkClick}
-                >
-                  <span className="nav-icon">{item.icon}</span>
-                  {!collapsed && <span className="nav-label">{item.label}</span>}
-                </Link>
-              )}
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      <div className="sidebar-footer">
-        {!collapsed && (
-          <div className="sidebar-user">
-            <span className="sidebar-user-name">{usuario?.nombre}</span>
-            <span className={`badge badge-${rolColor(usuario?.rol)}`}>{usuario?.rol}</span>
-          </div>
-        )}
-        <button
-          className="btn-logout"
-          onClick={handleLogout}
-          title={collapsed ? 'Cerrar Sesión' : undefined}
-        >
-          🚪{!collapsed && ' Cerrar Sesión'}
-        </button>
-      </div>
-    </>
-  );
 
   return (
     <>
@@ -112,7 +121,7 @@ export default function Sidebar({ usuario, activeRoute }) {
         onClick={() => setDrawerOpen(true)}
         aria-label="Abrir menú"
       >
-        <HamburgerIcon />
+        <Menu size={20} />
       </button>
 
       {drawerOpen && (
@@ -124,10 +133,14 @@ export default function Sidebar({ usuario, activeRoute }) {
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Cerrar menú"
               >
-                <CloseIcon />
+                <X size={20} />
               </button>
             </div>
-            <SidebarContent onLinkClick={() => setDrawerOpen(false)} />
+            <SidebarContent
+              usuario={usuario} activeRoute={activeRoute}
+              collapsed={false} navItems={navItems}
+              handleLogout={handleLogout} onLinkClick={() => setDrawerOpen(false)}
+            />
           </aside>
         </div>
       )}
@@ -138,25 +151,14 @@ export default function Sidebar({ usuario, activeRoute }) {
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
         >
-          <HamburgerIcon />
+          <Menu size={20} />
         </button>
-        <SidebarContent onLinkClick={undefined} />
+        <SidebarContent
+          usuario={usuario} activeRoute={activeRoute}
+          collapsed={collapsed} navItems={navItems}
+          handleLogout={handleLogout} onLinkClick={undefined}
+        />
       </aside>
     </>
   );
 }
-
-const HamburgerIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="3" y1="5" x2="17" y2="5" />
-    <line x1="3" y1="10" x2="17" y2="10" />
-    <line x1="3" y1="15" x2="17" y2="15" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="4" y1="4" x2="16" y2="16" />
-    <line x1="16" y1="4" x2="4" y2="16" />
-  </svg>
-);

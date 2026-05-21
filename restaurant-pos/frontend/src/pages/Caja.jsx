@@ -4,32 +4,26 @@ import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
+import { Apple, Cookie, PartyPopper, Tag, Crosshair, Gift, Clock, X } from 'lucide-react';
 
 import API from '../utils/api';
 
-const btnCantidad = {
-  width: '24px', height: '24px', borderRadius: '5px',
-  border: '1px solid var(--border)', background: 'var(--surface)',
-  color: 'var(--text)', cursor: 'pointer', fontSize: '15px',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  lineHeight: 1, padding: 0,
-};
-
 const TIPOS_PROMO = {
-  descuento_porcentaje: { label: 'Descuento %', icon: '\uD83C\uDFF7\uFE0F', color: '#3498db', bg: 'rgba(52,152,219,0.15)' },
-  dos_x_uno: { label: '2x1', icon: '\uD83C\uDFAF', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)' },
-  tres_x_dos: { label: '3x2', icon: '\uD83C\uDF81', color: '#e67e22', bg: 'rgba(230,126,34,0.15)' },
-  happy_hour: { label: 'Happy Hour', icon: '\u23F0', color: '#27ae60', bg: 'rgba(39,174,60,0.15)' },
+  descuento_porcentaje: { label: 'Descuento %', icon: Tag, color: '#3498db', bg: 'rgba(52,152,219,0.15)' },
+  dos_x_uno: { label: '2x1', icon: Crosshair, color: '#9b59b6', bg: 'rgba(155,89,182,0.15)' },
+  tres_x_dos: { label: '3x2', icon: Gift, color: '#e67e22', bg: 'rgba(230,126,34,0.15)' },
+  happy_hour: { label: 'Happy Hour', icon: Clock, color: '#27ae60', bg: 'rgba(39,174,60,0.15)' },
 };
 
 const MODAL_PAGO = 'pago';
 const MODAL_TICKET = 'ticket';
 const MODAL_TIPO = 'tipo';
 
-const styleScroll = {
-  maxHeight: 'calc(100vh - 100px)', overflowY: 'auto',
-  scrollbarWidth: 'thin', scrollbarColor: 'var(--gold-light) transparent',
-};
+const TABS = [
+  { key: 'productos', icon: Apple, label: 'Productos' },
+  { key: 'combos', icon: Cookie, label: 'Combos' },
+  { key: 'promociones', icon: PartyPopper, label: 'Promociones' },
+];
 
 export default function Caja() {
   const [tab, setTab] = useState('productos');
@@ -207,44 +201,26 @@ export default function Caja() {
     return (
     <div
       key={`${tipo}-${item.id}`}
+      className={`pos-product-card${sinStock ? ' pos-product-card--disabled' : ''}`}
       onClick={() => agregarAlCarrito(item, tipo)}
-      style={{
-        background: 'var(--card)',
-        borderRadius: '12px',
-        padding: '12px',
-        cursor: sinStock ? 'not-allowed' : 'pointer',
-        border: '1px solid var(--border)',
-        transition: 'all .2s',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
-        minHeight: '100px',
-        opacity: sinStock ? 0.5 : 1,
-      }}
-      onMouseEnter={e => { if (!sinStock) e.currentTarget.style.borderColor = 'var(--gold-light)'; }}
-      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>{item.nombre}</span>
+      <div className="pos-product-header">
+        <span className="pos-product-name">{item.nombre}</span>
         {item.stock !== undefined && Number(item.stock) <= Number(item.stock_minimo) && (
-          <span style={{
-            fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, whiteSpace: 'nowrap',
-            background: Number(item.stock) <= 0 ? 'var(--red-bg)' : 'rgba(241,196,15,0.15)',
-            color: Number(item.stock) <= 0 ? '#e74c3c' : '#f1c40f',
-          }}>
+          <span className={`pos-stock-badge ${Number(item.stock) <= 0 ? 'pos-stock-badge--out' : 'pos-stock-badge--low'}`}>
             {Number(item.stock) <= 0 ? 'Sin stock' : 'Stock bajo'}
           </span>
         )}
       </div>
       {item.descripcion && (
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1 }}>{item.descripcion}</span>
+        <span className="pos-product-desc">{item.descripcion}</span>
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-light)' }}>
+      <div className="pos-product-footer">
+        <span className="pos-product-price">
           ${Number(item.precio).toFixed(2)}
         </span>
         {item.stock !== undefined && Number(item.stock) > Number(item.stock_minimo) && (
-          <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>{item.stock} uds</span>
+          <span className="pos-stock-count">{item.stock} uds</span>
         )}
       </div>
     </div>
@@ -252,31 +228,22 @@ export default function Caja() {
   };
 
   const renderPromo = (promo) => {
-    const info = TIPOS_PROMO[promo.tipo] || { label: promo.tipo, icon: '\uD83C\uDF89', color: '#666', bg: 'rgba(0,0,0,0.05)' };
+    const info = TIPOS_PROMO[promo.tipo] || { label: promo.tipo, icon: PartyPopper, color: '#666', bg: 'rgba(0,0,0,0.05)' };
+    const IconComp = info.icon;
     return (
       <div
         key={`promo-${promo.id}`}
+        className="pos-promo-card"
+        style={{ background: info.bg, borderColor: info.color }}
         onClick={() => agregarAlCarrito(promo, 'promocion')}
-        style={{
-          background: info.bg,
-          borderRadius: '12px',
-          padding: '12px',
-          cursor: 'pointer',
-          border: `2px solid ${info.color}`,
-          transition: 'all .2s',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-          minHeight: '100px',
-        }}
       >
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-          {info.icon} {promo.nombre}
+        <span className="pos-promo-name">
+          <IconComp size={14} /> {promo.nombre}
         </span>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)', flex: 1 }}>
+        <span className="pos-promo-desc">
           {info.label}{promo.descuento_porcentaje ? ` - ${promo.descuento_porcentaje}% OFF` : ''}
         </span>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: info.color }}>
+        <span className="pos-promo-price" style={{ color: info.color }}>
           ${Number(promo.precio_final || promo.precio || 0).toFixed(2)}
         </span>
       </div>
@@ -294,9 +261,9 @@ export default function Caja() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div className="dashboard-page">
         <Sidebar usuario={usuario} activeRoute="caja" />
-      <main className="main-content" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <main className="main-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <p style={{ color: 'var(--text-muted)' }}>Cargando...</p>
         </main>
       </div>
@@ -306,74 +273,39 @@ export default function Caja() {
   return (
     <div className="dashboard-page">
       <Sidebar usuario={usuario} activeRoute="caja" />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px 24px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          background: 'var(--card)',
-        }}>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>
-            Punto de Venta
-          </h1>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {usuario?.nombre || 'Cajero'}
-          </span>
+      <div className="pos-layout">
+        <div className="pos-header">
+          <h1 className="pos-header-title">Punto de Venta</h1>
+          <span className="pos-header-user">{usuario?.nombre || 'Cajero'}</span>
         </div>
 
-        {/* Tabs: Productos, Combos, Promociones */}
-        <div style={{
-          display: 'flex', gap: '8px', padding: '12px 24px',
-          borderBottom: '1px solid var(--border)', background: 'var(--surface)',
-        }}>
-          {[
-            { key: 'productos', label: '\uD83C\uDF4E Productos' },
-            { key: 'combos', label: '\uD83C\uDF70 Combos' },
-            { key: 'promociones', label: '\uD83C\uDF89 Promociones' },
-          ].map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                background: tab === t.key ? 'var(--gold-light)' : 'var(--card)',
-                color: tab === t.key ? '#000' : 'var(--text)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontSize: '13px',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="pos-tabs">
+          {TABS.map(t => {
+            const IconComp = t.icon;
+            return (
+              <button
+                key={t.key}
+                className={`pos-tab-btn${tab === t.key ? ' active' : ''}`}
+                onClick={() => setTab(t.key)}
+              >
+                <IconComp size={16} /> {t.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Buscador + filtro categorias */}
-        <div style={{ padding: '12px 24px', display: 'flex', gap: '12px' }}>
+        <div className="pos-search-bar">
           <input
             type="text"
+            className="pos-search-input"
             placeholder="Buscar..."
             value={busqueda}
             onChange={e => setBusqueda(e.target.value)}
-            style={{
-              flex: 1, padding: '10px 14px', borderRadius: '8px',
-              border: '1px solid var(--border)', background: 'var(--card)',
-              color: 'var(--text)', fontSize: '13px',
-            }}
           />
           <select
+            className="pos-search-select"
             value={filtroCategoria}
             onChange={e => setFiltroCategoria(e.target.value)}
-            style={{
-              padding: '10px 14px', borderRadius: '8px',
-              border: '1px solid var(--border)', background: 'var(--card)',
-              color: 'var(--text)', fontSize: '13px', maxWidth: '200px',
-            }}
           >
             <option value="">Todas las categorías</option>
             {categorias.map(cat => (
@@ -382,87 +314,50 @@ export default function Caja() {
           </select>
         </div>
 
-        {/* Grid de items */}
-        <div style={{ flex: 1, padding: '0 24px 24px', overflowY: 'auto' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-            gap: '12px',
-          }}>
+        <div className="pos-grid-wrapper">
+          <div className="pos-grid">
             {tab === 'productos' && itemsFiltrados(productos).map(item => renderItem(item, 'producto'))}
             {tab === 'combos' && itemsFiltrados(combos).map(item => renderItem(item, 'combo'))}
             {tab === 'promociones' && itemsFiltrados(promociones).map(promo => renderPromo(promo))}
           </div>
         </div>
 
-        {/* Carrito - barra inferior */}
         {carrito.length > 0 && (
-          <div style={{
-            borderTop: '2px solid var(--gold-light)',
-            background: 'var(--card)',
-            padding: '12px 24px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 700, color: 'var(--text)' }}>
+          <div className="pos-cart-bar">
+            <div className="pos-cart-header">
+              <span className="pos-cart-title">
                 Carrito ({carrito.reduce((s, i) => s + i.cantidad, 0)} items)
               </span>
-              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--gold-light)' }}>
-                ${total.toFixed(2)}
-              </span>
+              <span className="pos-cart-total">${total.toFixed(2)}</span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px', maxHeight: '120px', overflowY: 'auto' }}>
+            <div className="pos-cart-items">
               {carrito.map((item, idx) => (
-                <div key={idx} style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'var(--surface)', borderRadius: '8px',
-                  padding: '6px 10px', fontSize: '12px',
-                }}>
-                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>
-                    {item.nombre}
-                  </span>
-                  <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>
+                <div key={idx} className="pos-cart-item">
+                  <span className="pos-cart-item-name">{item.nombre}</span>
+                  <span className="pos-cart-item-price">
                     ${(Number(item.precio_final || item.precio || 0) * item.cantidad).toFixed(2)}
                   </span>
-                  <button onClick={() => cambiarCantidad(idx, -1)} style={btnCantidad}>-</button>
-                  <span style={{ fontWeight: 700, color: 'var(--text)', minWidth: '16px', textAlign: 'center' }}>
-                    {item.cantidad}
-                  </span>
-                  <button onClick={() => cambiarCantidad(idx, 1)} style={btnCantidad}>+</button>
-                  <button
-                    onClick={() => quitarDelCarrito(idx)}
-                    style={{ ...btnCantidad, color: '#e74c3c', borderColor: '#e74c3c' }}
-                  >
-                    ✕
+                  <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, -1)}>-</button>
+                  <span className="pos-qty-count">{item.cantidad}</span>
+                  <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, 1)}>+</button>
+                  <button className="pos-qty-btn pos-qty-btn--remove" onClick={() => quitarDelCarrito(idx)}>
+                    <X size={16} />
                   </button>
                 </div>
               ))}
             </div>
-            <button
-              onClick={abrirModalTipo}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '10px',
-                border: 'none', background: 'var(--gold-light)', color: '#000',
-                fontWeight: 700, fontSize: '15px', cursor: 'pointer',
-              }}
-            >
+            <button className="pos-btn-process" onClick={abrirModalTipo}>
               Procesar Pedido — ${total.toFixed(2)}
             </button>
           </div>
         )}
 
-        {/* MODAL: Tipo de Pedido / Mesa / Cliente */}
         {modal === MODAL_TIPO && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-          }} onClick={cerrarModal}>
-            <div style={{
-              background: 'var(--card)', borderRadius: '16px', padding: '24px',
-              width: '420px', maxWidth: '90vw',
-            }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ margin: '0 0 16px', color: 'var(--text)' }}>Tipo de Pedido</h3>
+          <div className="pos-modal-overlay" onClick={cerrarModal}>
+            <div className="pos-modal-content" onClick={e => e.stopPropagation()}>
+              <h3 className="pos-modal-title">Tipo de Pedido</h3>
 
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <div className="pos-selection-group">
                 {[
                   { value: 'en_mesa', label: 'En Mesa' },
                   { value: 'para_llevar', label: 'Para Llevar' },
@@ -471,13 +366,8 @@ export default function Caja() {
                 ].map(t => (
                   <button
                     key={t.value}
+                    className={`pos-selection-btn${tipoPedido === t.value ? ' active' : ''}`}
                     onClick={() => setTipoPedido(t.value)}
-                    style={{
-                      flex: 1, padding: '10px', borderRadius: '10px',
-                      border: tipoPedido === t.value ? '2px solid var(--gold-light)' : '1px solid var(--border)',
-                      background: tipoPedido === t.value ? 'rgba(201,168,76,0.15)' : 'var(--surface)',
-                      color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-                    }}
                   >
                     {t.label}
                   </button>
@@ -486,20 +376,13 @@ export default function Caja() {
 
               {tipoPedido === 'en_mesa' && mesas.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Seleccionar Mesa
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  <label className="pos-label">Seleccionar Mesa</label>
+                  <div className="pos-mesa-group">
                     {mesas.filter(m => m.estado === 'disponible').map(mesa => (
                       <button
                         key={mesa.id}
+                        className={`pos-mesa-btn${mesaId === mesa.id ? ' active' : ''}`}
                         onClick={() => setMesaId(mesa.id)}
-                        style={{
-                          padding: '8px 16px', borderRadius: '8px',
-                          border: mesaId === mesa.id ? '2px solid var(--gold-light)' : '1px solid var(--border)',
-                          background: mesaId === mesa.id ? 'rgba(201,168,76,0.15)' : 'var(--surface)',
-                          color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-                        }}
                       >
                         Mesa {mesa.numero}
                       </button>
@@ -508,68 +391,47 @@ export default function Caja() {
                 </div>
               )}
 
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Nombre del cliente (opcional)
-              </label>
+              <label className="pos-label">Nombre del cliente (opcional)</label>
               <input
                 type="text"
+                className="pos-input"
                 value={clienteNombre}
                 onChange={e => setClienteNombre(e.target.value)}
-                style={{
-                  width: '100%', padding: '10px', borderRadius: '8px',
-                  border: '1px solid var(--border)', background: 'var(--surface)',
-                  color: 'var(--text)', marginBottom: '12px', fontSize: '13px',
-                }}
                 placeholder="Cliente..."
+                style={{ marginBottom: '12px' }}
               />
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Notas (opcional)
-              </label>
+              <label className="pos-label">Notas (opcional)</label>
               <textarea
+                className="pos-textarea"
                 value={notas}
                 onChange={e => setNotas(e.target.value)}
                 rows={2}
-                style={{
-                  width: '100%', padding: '10px', borderRadius: '8px',
-                  border: '1px solid var(--border)', background: 'var(--surface)',
-                  color: 'var(--text)', marginBottom: '16px', resize: 'none',
-                  fontFamily: 'inherit', fontSize: '13px',
-                }}
                 placeholder="Notas para cocina..."
+                style={{ marginBottom: '16px' }}
               />
 
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Subtotal</span>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>${subtotal.toFixed(2)}</span>
+              <div className="pos-totals">
+                <div className="pos-totals-row">
+                  <span>Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
                 </div>
                 {descuentoTotal > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '13px', color: '#2ecc71' }}>Descuentos</span>
-                    <span style={{ fontSize: '13px', color: '#2ecc71' }}>-${descuentoTotal.toFixed(2)}</span>
+                  <div className="pos-totals-row pos-totals-row--discount">
+                    <span>Descuentos</span>
+                    <span>-${descuentoTotal.toFixed(2)}</span>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '16px', color: 'var(--gold-light)' }}>
+                <div className="pos-totals-row pos-totals-row--total">
                   <span>Total</span>
                   <span>${total.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={cerrarModal}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px',
-                    border: '1px solid var(--border)', background: 'var(--surface)',
-                    color: 'var(--text)', cursor: 'pointer', fontWeight: 600,
-                  }}>
+              <div className="pos-actions">
+                <button className="pos-btn pos-btn-cancel" onClick={cerrarModal}>
                   Cancelar
                 </button>
-                <button onClick={confirmarTipoPedido} disabled={submitting}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
-                    background: submitting ? 'var(--surface)' : 'var(--gold-light)',
-                    color: '#000', cursor: submitting ? 'not-allowed' : 'pointer', fontWeight: 700,
-                  }}>
+                <button className="pos-btn pos-btn-primary" onClick={confirmarTipoPedido} disabled={submitting}>
                   {submitting ? 'Creando...' : 'Confirmar Pedido'}
                 </button>
               </div>
@@ -577,31 +439,19 @@ export default function Caja() {
           </div>
         )}
 
-        {/* MODAL: Pago */}
         {modal === MODAL_PAGO && pedidoActual && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-          }} onClick={cerrarModal}>
-            <div style={{
-              background: 'var(--card)', borderRadius: '16px', padding: '24px',
-              width: '420px', maxWidth: '90vw',
-            }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ margin: '0 0 16px', color: 'var(--text)' }}>Procesar Pago</h3>
+          <div className="pos-modal-overlay" onClick={cerrarModal}>
+            <div className="pos-modal-content" onClick={e => e.stopPropagation()}>
+              <h3 className="pos-modal-title">Procesar Pago</h3>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                 Pedido #{pedidoActual.numero_ticket} &mdash; Total a pagar
               </p>
-              <p style={{
-                fontSize: '28px', fontWeight: 800, color: 'var(--gold-light)',
-                textAlign: 'center', margin: '0 0 20px',
-              }}>
+              <p className="pos-pay-amount">
                 ${Number(pedidoActual.total).toFixed(2)}
               </p>
 
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                Método de pago
-              </label>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+              <label className="pos-label">Método de pago</label>
+              <div className="pos-selection-group">
                 {[
                   { value: 'efectivo', label: 'Efectivo' },
                   { value: 'tarjeta', label: 'Tarjeta (POS)' },
@@ -609,29 +459,23 @@ export default function Caja() {
                   { value: 'billetera_digital', label: 'Billetera' },
                   { value: 'transferencia', label: 'Transferencia' },
                 ].map(m => (
-                  <button key={m.value} onClick={() => { setMetodoPago(m.value); setMontoRecibido(''); }}
-                    style={{
-                      flex: 1, padding: '12px', borderRadius: '10px',
-                      border: metodoPago === m.value ? '2px solid var(--gold-light)' : '1px solid var(--border)',
-                      background: metodoPago === m.value ? 'rgba(201,168,76,0.15)' : 'var(--surface)',
-                      color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: '13px',
-                      transition: 'all .2s',
-                    }}>
+                  <button
+                    key={m.value}
+                    className={`pos-selection-btn${metodoPago === m.value ? ' active' : ''}`}
+                    onClick={() => { setMetodoPago(m.value); setMontoRecibido(''); }}
+                  >
                     {m.label}
                   </button>
                 ))}
               </div>
 
-              {/* Propina */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div className="pos-selection-group" style={{ marginBottom: 16 }}>
                 {[0, 0.50, 1.00, 2.00].map(tip => (
-                  <button key={tip} onClick={() => setPropina(tip)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: 8,
-                      border: propina === tip ? '2px solid var(--gold-light)' : '1px solid var(--border)',
-                      background: propina === tip ? 'rgba(201,168,76,0.15)' : 'var(--surface)',
-                      color: 'var(--text)', cursor: 'pointer', fontWeight: 600, fontSize: 12,
-                    }}>
+                  <button
+                    key={tip}
+                    className={`pos-selection-btn${propina === tip ? ' active' : ''}`}
+                    onClick={() => setPropina(tip)}
+                  >
                     {tip === 0 ? 'Sin' : `$${tip.toFixed(2)}`}
                   </button>
                 ))}
@@ -639,46 +483,34 @@ export default function Caja() {
 
               {metodoPago === 'efectivo' && (
                 <>
-                  <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Monto recibido
-                  </label>
-                  <input type="number" step="0.01" min={montoPago + propina} value={montoRecibido}
+                  <label className="pos-label">Monto recibido</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={montoPago + propina}
+                    value={montoRecibido}
                     onChange={e => setMontoRecibido(e.target.value)}
-                    style={{
-                      width: '100%', padding: '12px', borderRadius: '8px',
-                      border: '1px solid var(--border)', background: 'var(--surface)',
-                      color: 'var(--text)', fontSize: '18px', fontWeight: 700, marginBottom: '12px',
-                    }} />
+                    className="pos-input"
+                    style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}
+                  />
                   {Number(montoRecibido || 0) >= (montoPago + propina) && (
-                    <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cambio: </span>
-                      <span style={{ fontSize: '20px', fontWeight: 700, color: '#2ecc71' }}>
-                        ${cambio.toFixed(2)}
-                      </span>
+                    <div className="pos-cambio">
+                      <span className="pos-cambio-label">Cambio: </span>
+                      <span className="pos-cambio-value">${cambio.toFixed(2)}</span>
                     </div>
                   )}
                 </>
               )}
 
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={cerrarModal}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px',
-                    border: '1px solid var(--border)', background: 'var(--surface)',
-                    color: 'var(--text)', cursor: 'pointer', fontWeight: 600,
-                  }}>
+              <div className="pos-actions" style={{ alignItems: 'center' }}>
+                <button className="pos-btn pos-btn-cancel" onClick={cerrarModal}>
                   Cancelar
                 </button>
-                <div style={{ flex: 1, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', padding: '12px 0' }}>
-                  Total: <strong style={{ fontSize: 18, color: 'var(--text)' }}>${(montoPago + propina).toFixed(2)}</strong>
-                  {propina > 0 && <span style={{ fontSize: 11 }}> (incl. ${propina.toFixed(2)} propina)</span>}
+                <div className="pos-empty-cart-total">
+                  Total: <strong>${(montoPago + propina).toFixed(2)}</strong>
+                  {propina > 0 && <span style={{ fontSize: 11, display: 'block' }}>(incl. ${propina.toFixed(2)} propina)</span>}
                 </div>
-                <button onClick={procesarPago} disabled={procesandoPago}
-                  style={{
-                    flex: 1, padding: '12px', borderRadius: '10px', border: 'none',
-                    background: procesandoPago ? 'var(--surface)' : '#27ae60',
-                    color: '#fff', cursor: procesandoPago ? 'not-allowed' : 'pointer', fontWeight: 700,
-                  }}>
+                <button className="pos-btn pos-btn-pay" onClick={procesarPago} disabled={procesandoPago}>
                   {procesandoPago ? 'Procesando...' : 'Pagar'}
                 </button>
               </div>
@@ -686,103 +518,70 @@ export default function Caja() {
           </div>
         )}
 
-        {/* MODAL: Ticket */}
         {modal === MODAL_TICKET && pedidoActual && (
-          <div style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-          }} onClick={cerrarModal}>
-            <div style={{
-              background: '#fff', borderRadius: '16px', padding: '32px',
-              width: '380px', maxWidth: '90vw', color: '#000',
-            }} onClick={e => e.stopPropagation()}>
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 800 }}>Dulce Patojo</h2>
-                <p style={{ margin: 0, fontSize: '11px', color: '#666' }}>Sistema POS &mdash; Ticket de Venta</p>
-                <div style={{ borderTop: '1px dashed #ccc', margin: '12px 0' }} />
-                <h1 style={{ margin: 0, fontSize: '36px', fontWeight: 800, color: '#000', letterSpacing: '2px' }}>
+          <div className="pos-modal-overlay" onClick={cerrarModal}>
+            <div className="pos-ticket-modal" onClick={e => e.stopPropagation()}>
+              <div className="pos-ticket-header">
+                <h2>Dulce Patojo</h2>
+                <p>Sistema POS &mdash; Ticket de Venta</p>
+                <div className="pos-ticket-divider" />
+                <p className="pos-ticket-number">
                   #{String(pedidoActual.numero_ticket).padStart(3, '0')}
-                </h1>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#666' }}>
+                </p>
+                <p className="pos-ticket-date">
                   {new Date(pedidoActual.creado_en).toLocaleString('es-SV')}
                 </p>
               </div>
 
-              <div style={{ borderTop: '1px dashed #ccc', paddingTop: '12px', marginBottom: '12px' }}>
+              <div className="pos-ticket-items pos-ticket-divider">
                 {pedidoActual.pedido_items?.map((item, i) => (
-                  <div key={i} style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    fontSize: '12px', marginBottom: '6px',
-                  }}>
-                    <span style={{ flex: 1 }}>{item.cantidad}x {item.nombre}</span>
-                    <span style={{ fontWeight: 600 }}>
-                      ${Number(item.precio_unitario * item.cantidad).toFixed(2)}
-                    </span>
+                  <div key={i} className="pos-ticket-item">
+                    <span>{item.cantidad}x {item.nombre}</span>
+                    <span>${Number(item.precio_unitario * item.cantidad).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
-              <div style={{ borderTop: '1px dashed #ccc', paddingTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+              <div className="pos-ticket-totals">
+                <div className="pos-ticket-total-row">
                   <span>Subtotal</span>
                   <span>${Number(pedidoActual.subtotal).toFixed(2)}</span>
                 </div>
                 {Number(pedidoActual.descuento) > 0 && (
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    fontSize: '12px', marginBottom: '4px', color: '#2ecc71',
-                  }}>
+                  <div className="pos-ticket-total-row" style={{ color: '#2ecc71' }}>
                     <span>Descuento</span>
                     <span>-${Number(pedidoActual.descuento).toFixed(2)}</span>
                   </div>
                 )}
                 {Number(pedidoActual.iva || 0) > 0 && (
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    fontSize: '11px', marginBottom: '4px', color: '#666',
-                  }}>
+                  <div className="pos-ticket-total-row" style={{ color: '#666' }}>
                     <span>IVA 13%</span>
                     <span>${Number(pedidoActual.iva).toFixed(2)}</span>
                   </div>
                 )}
                 {Number(pedidoActual.pagos?.[0]?.propina || 0) > 0 && (
-                  <div style={{
-                    display: 'flex', justifyContent: 'space-between',
-                    fontSize: '11px', marginBottom: '4px', color: '#666',
-                  }}>
+                  <div className="pos-ticket-total-row" style={{ color: '#666' }}>
                     <span>Propina</span>
                     <span>$${Number(pedidoActual.pagos[0].propina).toFixed(2)}</span>
                   </div>
                 )}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  fontSize: '16px', fontWeight: 800,
-                  borderTop: '1px solid #ccc', paddingTop: '8px', marginTop: '8px',
-                }}>
+                <div className="pos-ticket-grand-total">
                   <span>TOTAL</span>
                   <span>${Number(pedidoActual.total_con_iva || pedidoActual.total).toFixed(2)}</span>
                 </div>
               </div>
 
-              <div style={{
-                borderTop: '1px dashed #ccc', marginTop: '12px', paddingTop: '12px',
-                textAlign: 'center', fontSize: '10px', color: '#999',
-              }}>
-                <p style={{ margin: 0 }}>
+              <div className="pos-ticket-footer">
+                <p>
                   Tipo: {pedidoActual.tipo === 'en_mesa' ? 'En mesa' : pedidoActual.tipo === 'para_llevar' ? 'Para llevar' : pedidoActual.tipo === 'domicilio' ? 'Domicilio' : 'Para recoger'}
                 </p>
                 {pedidoActual.cliente_nombre && (
-                  <p style={{ margin: '4px 0 0' }}>Cliente: {pedidoActual.cliente_nombre}</p>
+                  <p>Cliente: {pedidoActual.cliente_nombre}</p>
                 )}
-                <p style={{ margin: '4px 0 0' }}>Gracias por tu preferencia!</p>
+                <p>Gracias por tu preferencia!</p>
               </div>
 
-              <button onClick={cerrarModal}
-                style={{
-                  width: '100%', padding: '12px', borderRadius: '10px',
-                  border: 'none', background: '#000', color: '#fff',
-                  fontWeight: 700, cursor: 'pointer', marginTop: '16px',
-                }}>
+              <button className="pos-btn-close-ticket" onClick={cerrarModal}>
                 Cerrar Ticket
               </button>
             </div>
