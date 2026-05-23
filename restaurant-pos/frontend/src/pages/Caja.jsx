@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
+import CobrosPendientesModal from '../components/CobrosPendientesModal';
+import useCobrosSocket from '../hooks/useCobrosSocket';
 import {
   Apple,
   Cookie,
@@ -24,6 +26,7 @@ import {
   ShoppingBasket,
   Store,
   Loader2,
+  Receipt,
 } from 'lucide-react';
 
 import API from '../utils/api';
@@ -68,6 +71,17 @@ export default function Caja() {
   const [propina, setPropina] = useState(0);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [pedidosPorCobrar, setPedidosPorCobrar] = useState([]);
+  const [cargandoCobros, setCargandoCobros] = useState(false);
+  const [cobrosModalOpen, setCobrosModalOpen] = useState(false);
+  const [busquedaCobros, setBusquedaCobros] = useState('');
+  const [filtroMesaCobros, setFiltroMesaCobros] = useState('');
+  const [paginaCobros, setPaginaCobros] = useState(1);
+  const [totalCobros, setTotalCobros] = useState(0);
+  const [totalPaginasCobros, setTotalPaginasCobros] = useState(1);
+  const [bloqueandoCobro, setBloqueandoCobro] = useState(null);
+  const [errorCobro, setErrorCobro] = useState('');
+  const [refetchCobros, setRefetchCobros] = useState(0);
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -113,6 +127,62 @@ export default function Caja() {
       setCartOpen(true);
     }
   }, [carrito.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCobros = async () => {
+      setCargandoCobros(true);
+      setErrorCobro('');
+      try {
+        const params = { page: paginaCobros, limit: 20 };
+        if (busquedaCobros) params.search = busquedaCobros;
+        if (filtroMesaCobros) params.mesa = filtroMesaCobros;
+        const res = await axios.get(`${API}/api/caja/cobros-pendientes`, { params, headers });
+        if (cancelled) return;
+        setPedidosPorCobrar(res.data.data || []);
+        setTotalCobros(res.data.total || 0);
+        setTotalPaginasCobros(res.data.totalPages || 1);
+      } catch {
+        if (!cancelled) setErrorCobro('Error al cargar cobros pendientes');
+      } finally {
+        if (!cancelled) setCargandoCobros(false);
+      }
+    };
+    fetchCobros();
+    return () => { cancelled = true; };
+  }, [paginaCobros, busquedaCobros, filtroMesaCobros, refetchCobros]);
+
+  useCobrosSocket({
+    onCobroIniciado: (data) => {
+      setPedidosPorCobrar(prev =>
+        prev.map(p => p.id === data.pedido_id ? {
+          ...p, bloqueo_usuario_id: data.usuario_id,
+          bloqueado_por_nombre: data.usuario_nombre,
+          bloqueo_iniciado_en: data.iniciado_en,
+        } : p)
+      );
+    },
+    onBloqueoLiberado: (data) => {
+      setPedidosPorCobrar(prev =>
+        prev.map(p => p.id === data.pedido_id ? {
+          ...p, bloqueo_usuario_id: null,
+          bloqueado_por_nombre: null,
+          bloqueo_iniciado_en: null,
+        } : p)
+      );
+    },
+    onPedidoPagado: (data) => {
+      setPedidosPorCobrar(prev => prev.filter(p => p.id !== data.id));
+    },
+    onCambioEstado: (data) => {
+      if (data.estado === 'listo' || data.estado === 'entregado') {
+        setRefetchCobros(prev => prev + 1);
+      }
+      if (data.estado === 'pagado' || data.estado === 'cancelado') {
+        setPedidosPorCobrar(prev => prev.filter(p => p.pedido_id === data.pedido_id));
+      }
+    },
+  });
 
   const agregarAlCarrito = (item, tipo) => {
     if (tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0) {
@@ -182,13 +252,92 @@ export default function Caja() {
       setPedidoActual(res.data);
       setCarrito([]);
       await recargarMesas();
-      setModal(MODAL_PAGO);
+      setModal(null);
+      addToast(`Pedido #${res.data.numero_ticket} creado exitosamente`, 'success');
     } catch (err) {
       console.error('Error al crear pedido:', err);
       addToast(err.response?.data?.error || 'Error al crear pedido', 'error');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleIniciarCobro = async (pedido) => {
+    setBloqueandoCobro(pedido.id);
+    setErrorCobro('');
+    try {
+      await axios.post(`${API}/api/caja/iniciar-cobro`, {
+        pedido_id: pedido.id,
+      }, { headers });
+      setPedidosPorCobrar(prev =>
+        prev.map(p => p.id === pedido.id ? {
+          ...p, bloqueo_usuario_id: usuario.id || 1,
+          bloqueado_por_nombre: usuario.nombre || 'Cajero',
+          bloqueo_iniciado_en: new Date().toISOString(),
+        } : p)
+      );
+      addToast(`Cobro iniciado para pedido #${pedido.numero_ticket}`, 'success');
+    } catch (err) {
+      const data = err.response?.data;
+      if (data?.bloqueado_por_nombre) {
+        addToast(`El pedido #${pedido.numero_ticket} ya está siendo cobrado por ${data.bloqueado_por_nombre}`, 'error');
+        setPedidosPorCobrar(prev =>
+          prev.map(p => p.id === pedido.id ? {
+            ...p, bloqueo_usuario_id: data.bloqueado_por,
+            bloqueado_por_nombre: data.bloqueado_por_nombre,
+            bloqueo_iniciado_en: data.bloqueo_iniciado_en,
+          } : p)
+        );
+      } else {
+        addToast(data?.error || 'Error al iniciar cobro', 'error');
+      }
+    } finally {
+      setBloqueandoCobro(null);
+    }
+  };
+
+  const handleLiberarBloqueo = async (pedido) => {
+    try {
+      await axios.post(`${API}/api/caja/liberar-bloqueo`, {
+        pedido_id: pedido.id,
+      }, { headers });
+      setPedidosPorCobrar(prev =>
+        prev.map(p => p.id === pedido.id ? {
+          ...p, bloqueo_usuario_id: null,
+          bloqueado_por_nombre: null,
+          bloqueo_iniciado_en: null,
+        } : p)
+      );
+      addToast(`Bloqueo liberado para pedido #${pedido.numero_ticket}`, 'success');
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Error al liberar bloqueo', 'error');
+    }
+  };
+
+  const handlePagoExitoso = () => {
+    setRefetchCobros(prev => prev + 1);
+  };
+
+  const tiempoDesdeCreado = (fecha) => {
+    if (!fecha) return '';
+    const segs = Math.floor((Date.now() - new Date(fecha).getTime()) / 1000);
+    if (segs < 60) return `${segs}s`;
+    if (segs < 3600) return `${Math.floor(segs / 60)}m`;
+    return `${Math.floor(segs / 3600)}h ${Math.floor((segs % 3600) / 60)}m`;
+  };
+
+  const esMioElBloqueo = (pedido) => {
+    return pedido.bloqueo_usuario_id && (pedido.bloqueo_usuario_id === usuario.id || usuario.rol === 'Admin');
+  };
+
+  const estadoLabel = {
+    listo: 'Listo', entregado: 'Entregado',
+    pagando: 'En proceso',
+  };
+
+  const estadoBadgeClass = {
+    listo: 'badge-warning', entregado: 'badge-primary',
+    pagando: 'badge badge--pagando',
   };
 
   const procesarPago = async () => {
@@ -205,6 +354,7 @@ export default function Caja() {
         { headers }
       );
       setPedidoActual(res.data.pedido);
+      setPedidosPorCobrar(prev => prev.filter(p => p.id !== pedidoActual.id));
       await recargarMesas();
       setModal(MODAL_TICKET);
     } catch (err) {
@@ -325,6 +475,33 @@ export default function Caja() {
           </div>
         </div>
 
+        <CobrosPendientesModal
+          open={cobrosModalOpen}
+          onClose={() => setCobrosModalOpen(false)}
+          pedidosPorCobrar={pedidosPorCobrar}
+          cargandoCobros={cargandoCobros}
+          totalCobros={totalCobros}
+          paginaCobros={paginaCobros}
+          totalPaginasCobros={totalPaginasCobros}
+          errorCobro={errorCobro}
+          busquedaCobros={busquedaCobros}
+          filtroMesaCobros={filtroMesaCobros}
+          bloqueandoCobro={bloqueandoCobro}
+          onSearchChange={(val) => { setBusquedaCobros(val); setPaginaCobros(1); }}
+          onFilterMesaChange={(val) => { setFiltroMesaCobros(val); setPaginaCobros(1); }}
+          onPageChange={setPaginaCobros}
+          onRefresh={() => setRefetchCobros(prev => prev + 1)}
+          onIniciarCobro={handleIniciarCobro}
+          onLiberarBloqueo={handleLiberarBloqueo}
+          procesandoPago={procesandoPago}
+          setProcesandoPago={setProcesandoPago}
+          usuario={usuario}
+          esMioElBloqueo={esMioElBloqueo}
+          tiempoDesdeCreado={tiempoDesdeCreado}
+          estadoLabel={estadoLabel}
+          estadoBadgeClass={estadoBadgeClass}
+        />
+
         <div className="pos-content">
           <section className="pos-catalog">
             <div className="pos-tabs">
@@ -340,6 +517,18 @@ export default function Caja() {
                   </button>
                 );
               })}
+              <div className="pos-tabs-spacer" />
+              <button
+                className="pos-tab-btn pos-tab-btn--cobros"
+                onClick={() => setCobrosModalOpen(true)}
+                title="Cobros Pendientes"
+              >
+                <Receipt size={18} />
+                <span>Cobros pendientes</span>
+                {totalCobros > 0 && (
+                  <span className="pos-tab-badge">{totalCobros}</span>
+                )}
+              </button>
             </div>
 
             <div className="pos-search-bar">

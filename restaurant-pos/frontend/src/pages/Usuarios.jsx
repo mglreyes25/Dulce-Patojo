@@ -5,6 +5,8 @@ import { useInactividad } from '../hooks/useInactividad';
 import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
+import PasswordInput from '../components/PasswordInput';
+import { validarPassword } from '../utils/password';
 
 const rolBadge = (rol) => {
   const map = {

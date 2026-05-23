@@ -13,6 +13,8 @@ const mesasRoutes       = require('./routes/mesasRoutes');
 const ingredientesRoutes = require('./routes/ingredientesRoutes');
 const recetasRoutes     = require('./routes/recetasRoutes');
 const proveedoresRoutes = require('./routes/proveedoresRoutes');
+const pagosRoutes       = require('./routes/pagosRoutes');
+const cajaRoutes        = require('./routes/cajaRoutes');
 const { initSocket }    = require('./config/socket');
 
 const app = express();
@@ -31,6 +33,8 @@ app.use('/mesas',         mesasRoutes);
 app.use('/ingredientes',  ingredientesRoutes);
 app.use('/recetas',       recetasRoutes);
 app.use('/proveedores',   proveedoresRoutes);
+app.use('/pagos',         pagosRoutes);
+app.use('/api/caja',      cajaRoutes);
 
 app.get('/', (req, res) => res.json({ message: '🚀 Backend Restaurant POS funcionando' }));
 

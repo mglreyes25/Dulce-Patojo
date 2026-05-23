@@ -1,5 +1,14 @@
 ﻿const supabase = require('../config/database');
-const { emitNuevoPedido, emitCambioEstado, emitPedidoListo } = require('../config/socketEmitter');
+const { emitNuevoPedido, emitCambioEstado, emitPedidoListo, emitPedidoPagado } = require('../config/socketEmitter');
+
+const TRANSICIONES_VALIDAS = {
+  'recibido': ['en_preparacion', 'cancelado'],
+  'en_preparacion': ['listo', 'cancelado'],
+  'listo': ['entregado', 'cancelado'],
+  'entregado': ['pagado', 'cancelado'],
+  'pagado': [],
+  'cancelado': [],
+};
 
 // ── HELPER: Descontar stock de ingredientes por receta ──────────
 const descontarStockPorReceta = async (productoId, cantidad, descripcion, usuarioId) => {
@@ -373,13 +382,23 @@ const cambiarEstadoPedido = async (req, res) => {
       .single();
     if (getError || !pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
 
+    const transiciones = TRANSICIONES_VALIDAS[pedido.estado];
+    if (!transiciones || !transiciones.includes(estado)) {
+      return res.status(400).json({
+        error: `Transición inválida: ${pedido.estado} → ${estado}. Permisos: ${transiciones?.join(', ') || 'ninguna'}`,
+      });
+    }
+
     const { data, error } = await supabase
       .from('pedidos')
       .update({ estado, actualizado_en: new Date().toISOString() })
       .eq('id', id)
       .select('*, pedido_items(*)')
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error('Error Supabase al actualizar pedido:', error);
+      return res.status(500).json({ error: 'Error al actualizar pedido', detalle: error.message, code: error.code });
+    }
 
     // ── Restaurar stock si se cancela el pedido ──
     if (estado === 'cancelado' && pedido.estado !== 'cancelado' && data.pedido_items) {
@@ -414,10 +433,14 @@ const cambiarEstadoPedido = async (req, res) => {
       }
     }
 
-    await supabase.from('bitacora_permisos').insert({
-      usuario_id: req.user.id, accion: 'ESTADO_PEDIDO',
-      descripcion: `Pedido #${pedido.numero_ticket}: ${pedido.estado} → ${estado}`,
-    });
+    try {
+      await supabase.from('bitacora_permisos').insert({
+        usuario_id: req.user.id, accion: 'ESTADO_PEDIDO',
+        descripcion: `Pedido #${pedido.numero_ticket}: ${pedido.estado} → ${estado}`,
+      });
+    } catch (logErr) {
+      console.error('Error registrando en bitacora_permisos:', logErr);
+    }
 
     // Socket: notificar cambio de estado
     emitCambioEstado(id, estado, pedido.numero_ticket);
@@ -426,7 +449,7 @@ const cambiarEstadoPedido = async (req, res) => {
     res.json(data);
   } catch (e) {
     console.error('Error cambiando estado:', e);
-    res.status(500).json({ error: 'Error al cambiar estado' });
+    res.status(500).json({ error: 'Error al cambiar estado', detalle: e.message, code: e.code });
   }
 };
 
@@ -501,15 +524,21 @@ const procesarPago = async (req, res) => {
       await supabase.from('mesas').update({ estado: 'disponible' }).eq('id', pedido.mesa_id);
     }
 
-    await supabase.from('bitacora_permisos').insert({
-      usuario_id: req.user.id, accion: 'PAGO',
-      descripcion: `Pago pedido #${pedido.numero_ticket} — ${metodo} — $${total}${tip > 0 ? ` + $${tip} propina` : ''}`,
-    });
+    try {
+      await supabase.from('bitacora_permisos').insert({
+        usuario_id: req.user.id, accion: 'PAGO',
+        descripcion: `Pago pedido #${pedido.numero_ticket} — ${metodo} — $${total}${tip > 0 ? ` + $${tip} propina` : ''}`,
+      });
+    } catch (logErr) {
+      console.error('Error registrando en bitacora_permisos:', logErr);
+    }
+
+    if (pedidoActualizado) emitPedidoPagado(pedidoActualizado);
 
     res.json({ pedido: pedidoActualizado, pago });
   } catch (e) {
     console.error('Error procesando pago:', e);
-    res.status(500).json({ error: 'Error al procesar pago' });
+    res.status(500).json({ error: 'Error al procesar pago', detalle: e.message });
   }
 };
 
