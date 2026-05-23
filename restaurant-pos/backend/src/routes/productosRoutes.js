@@ -8,7 +8,8 @@ const {
   obtenerProductos, obtenerProductoPorId, crearProducto, actualizarProducto,
   toggleDisponible, obtenerHistorialPrecios,
   actualizarPreciosMasivo, revertirUltimoPrecio,
-  obtenerCombos, crearCombo, actualizarCombo, toggleCombo
+  obtenerCombos, crearCombo, actualizarCombo, toggleCombo,
+  eliminarProducto
 } = require('../controllers/productosController');
 const { subirImagen } = require('../controllers/uploadController');
 
@@ -43,6 +44,7 @@ router.get('/:id',                   auth, obtenerProductoPorId);
 router.post('/',                     auth, requireAdmin, crearProducto);
 router.put('/:id',                   auth, requireAdmin, actualizarProducto);
 router.patch('/:id/toggle',          auth, requireAdmin, toggleDisponible);
+router.delete('/:id',                auth, requireAdmin, eliminarProducto);
 router.get('/:id/historial',         auth, requireAdmin, obtenerHistorialPrecios);
 router.post('/:id/revertir-precio',  auth, requireAdmin, revertirUltimoPrecio);
 

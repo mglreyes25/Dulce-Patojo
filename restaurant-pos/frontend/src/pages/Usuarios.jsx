@@ -32,6 +32,11 @@ function Usuarios() {
   const [inactivarTarget, setInactivarTarget]       = useState(null);
   const [motivoInactivar, setMotivoInactivar]       = useState('');
 
+  // Eliminar modal
+  const [showEliminarModal, setShowEliminarModal] = useState(false);
+  const [eliminarTarget, setEliminarTarget]       = useState(null);
+  const [eliminando, setEliminando]               = useState(false);
+
   // Filtros
   const [busqueda, setBusqueda]         = useState('');
   const [filtroRol, setFiltroRol]       = useState('Todos');
@@ -167,6 +172,21 @@ function Usuarios() {
     }
   };
 
+  const handleEliminar = async () => {
+    setEliminando(true);
+    try {
+      await axios.delete(`${API_URL}/usuarios/${eliminarTarget.id}`, { headers });
+      setShowEliminarModal(false);
+      setEliminarTarget(null);
+      cargarUsuarios();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al eliminar usuario');
+      setShowEliminarModal(false);
+    } finally {
+      setEliminando(false);
+    }
+  };
+
   const confirmarInactivar = async () => {
     if (!motivoInactivar.trim()) {
       setError('Debes escribir una explicación');
@@ -291,6 +311,13 @@ function Usuarios() {
                         >
                           {u.activo ? '🔒 Inactivar' : '✅ Activar'}
                         </button>
+                        <button
+                          className="btn-small"
+                          style={{ background: 'var(--red-bg)', color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)' }}
+                          onClick={() => { setEliminarTarget(u); setShowEliminarModal(true); }}
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -385,6 +412,47 @@ function Usuarios() {
                 disabled={guardando}
               >
                 {guardando ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal eliminar ── */}
+      {showEliminarModal && (
+        <div className="modal-overlay" onClick={() => setShowEliminarModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ color: '#e74c3c' }}>🗑️ Eliminar Usuario</h3>
+            {error && <div className="message error-message">{error}</div>}
+
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              ¿Estás seguro de eliminar permanentemente a <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
+            </p>
+            <p style={{ fontSize: '13px', color: '#e74c3c', background: 'var(--red-bg)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>
+              ⚠️ Esta acción no se puede deshacer. Si el usuario tiene registros asociados (pedidos, pagos), no se podrá eliminar.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                className="btn"
+                style={{
+                  flex: 1, background: 'var(--surface)',
+                  color: 'var(--text-muted)', border: '1px solid var(--border)',
+                }}
+                onClick={() => setShowEliminarModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn"
+                style={{
+                  flex: 1, background: '#c0392b',
+                  color: '#fff', border: '1px solid #e74c3c',
+                }}
+                onClick={handleEliminar}
+                disabled={eliminando}
+              >
+                {eliminando ? 'Eliminando…' : '🗑️ Eliminar Permanentemente'}
               </button>
             </div>
           </div>

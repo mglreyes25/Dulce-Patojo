@@ -128,6 +128,9 @@ export default function CobrosPendientesModal({
                         {p.cliente_nombre && (
                           <span className="cobros-modal-cliente">{p.cliente_nombre}</span>
                         )}
+                        {p.tipo && (
+                          <span className="cobros-modal-tipo">{p.tipo.replace('_', ' ')}</span>
+                        )}
                         <span className="cobros-modal-time">
                           <Clock size={12} /> {tiempoDesdeCreado(p.creado_en)}
                         </span>
@@ -135,16 +138,23 @@ export default function CobrosPendientesModal({
 
                       {p.items_resumen && p.items_resumen.length > 0 && (
                         <div className="cobros-modal-items-resumen">
-                          {p.items_resumen.slice(0, 3).map((item, i) => (
+                          {p.items_resumen.map((item, i) => (
                             <span key={i} className="cobros-modal-item-tag">
                               {item.cantidad}x {item.nombre}
+                              {item.notas && (
+                                <span className="cobros-modal-item-nota">📝 {item.notas}</span>
+                              )}
                             </span>
                           ))}
-                          {p.items_resumen.length > 3 && (
-                            <span className="cobros-modal-item-tag cobros-modal-item-tag--more">
-                              +{p.items_resumen.length - 3}
-                            </span>
-                          )}
+                        </div>
+                      )}
+
+                      {p.notas && (
+                        <div style={{
+                          fontSize: '12px', color: 'var(--caramel)', marginTop: '6px',
+                          background: 'var(--caramel-dim)', padding: '6px 10px', borderRadius: '6px',
+                        }}>
+                          📝 {p.notas}
                         </div>
                       )}
                     </div>

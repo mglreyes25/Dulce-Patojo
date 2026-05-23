@@ -1232,6 +1232,25 @@ a.nav-disabled {
   white-space: nowrap;
 }
 
+.kitchen-recipe-btn {
+  background: var(--gold-dim);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 6px;
+  color: var(--gold-light);
+  cursor: pointer;
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.kitchen-recipe-btn:hover {
+  background: rgba(201,168,76,0.35);
+}
+
 .kitchen-actions { margin-top: 4px; }
 
 .kitchen-btn {
@@ -1813,6 +1832,26 @@ a.nav-disabled {
   background: var(--bg2);
   color: var(--text-muted);
   border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.cobros-modal-item-nota {
+  font-size: 10px;
+  color: #f1c40f;
+  font-weight: 500;
+}
+
+.cobros-modal-tipo {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--blue-bg);
+  color: var(--blue);
+  border: 1px solid rgba(52,152,219,0.3);
+  text-transform: capitalize;
   white-space: nowrap;
 }
 
@@ -2053,14 +2092,22 @@ a.nav-disabled {
 .cobros-detail-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
   font-size: 14px;
+  gap: 12px;
 }
 
 .cobros-detail-item:last-child {
   border-bottom: none;
+}
+
+.cobros-detail-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .cobros-detail-item-name {
@@ -2068,9 +2115,16 @@ a.nav-disabled {
   font-weight: 500;
 }
 
+.cobros-detail-item-nota {
+  font-size: 11px;
+  color: #f1c40f;
+  font-weight: 400;
+}
+
 .cobros-detail-item-price {
   color: var(--gold-light);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .cobros-detail-empty {

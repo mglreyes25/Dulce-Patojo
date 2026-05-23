@@ -170,4 +170,43 @@ const activarUsuario = async (req, res) => {
   }
 };
 
-module.exports = { obtenerUsuarios, obtenerUsuarioPorId, crearUsuario, actualizarUsuario, inactivarUsuario, activarUsuario };
+// ELIMINAR USUARIO (permanente)
+const eliminarUsuario = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Verificar que existe
+    const { data: usuario, error: getError } = await supabase
+      .from('usuarios')
+      .select('id, nombre, correo, rol')
+      .eq('id', id)
+      .single();
+
+    if (getError || !usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Intentar eliminar
+    const { error } = await supabase
+      .from('usuarios')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.code === '23503') { // FK violation
+        return res.status(409).json({ error: 'No se puede eliminar el usuario porque tiene registros asociados (pedidos, pagos, etc.). Puede inactivarlo en su lugar.' });
+      }
+      throw error;
+    }
+
+    await supabase.from('bitacora_permisos').insert({
+      usuario_id: req.user.id,
+      accion: 'ELIMINAR_USUARIO',
+      descripcion: `Usuario ${usuario.nombre} (${usuario.correo}) eliminado permanentemente`
+    });
+
+    res.json({ message: 'Usuario eliminado permanentemente', usuario });
+  } catch (error) {
+    console.error('Error eliminando usuario:', error);
+    res.status(500).json({ error: 'Error al eliminar usuario' });
+  }
+};
+
+module.exports = { obtenerUsuarios, obtenerUsuarioPorId, crearUsuario, actualizarUsuario, inactivarUsuario, activarUsuario, eliminarUsuario };

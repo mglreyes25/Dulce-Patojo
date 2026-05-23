@@ -121,11 +121,34 @@ function Despacho() {
                           {p.tipo === 'en_mesa' ? `🍽️ Mesa ${p.mesa?.numero || ''}` : p.tipo === 'para_llevar' ? '🛍️ Para llevar' : p.tipo === 'domicilio' ? '🚴 Domicilio' : '🏃 Para recoger'}
                         </div>
                       )}
+
+                      {/* Notas adicionales del pedido */}
+                      {p.notas && (
+                        <div style={{
+                          background: 'var(--caramel-dim)', borderRadius: '6px', padding: '8px 10px',
+                          marginTop: '8px', fontSize: '13px', border: '1px solid rgba(212,163,115,0.25)'
+                        }}>
+                          <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--caramel)', marginBottom: '2px' }}>
+                            📝 Notas del pedido
+                          </div>
+                          {p.notas}
+                        </div>
+                      )}
+
                       <div className="dispatch-items">
                         {(p.pedido_items || []).map((item, i) => (
                           <div key={i} className="dispatch-item">
                             <span style={{color:'var(--gold-light)',fontWeight:700,minWidth:'24px'}}>{item.cantidad}x</span>
-                            {item.nombre}
+                            <span style={{flex:1}}>{item.nombre}</span>
+                            {item.notas && (
+                              <span style={{
+                                fontSize:'11px', color:'#f1c40f', background:'rgba(231,76,60,0.15)',
+                                padding:'2px 8px', borderRadius:'6px', border:'1px solid rgba(231,76,60,0.3)',
+                                whiteSpace:'nowrap'
+                              }}>
+                                📝 {item.notas}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>

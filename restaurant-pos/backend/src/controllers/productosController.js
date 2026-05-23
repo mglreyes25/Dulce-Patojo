@@ -386,10 +386,48 @@ const toggleCombo = async (req, res) => {
   }
 };
 
+// ELIMINAR PRODUCTO (permanente)
+const eliminarProducto = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: producto, error: getError } = await supabase
+      .from('productos')
+      .select('id, nombre')
+      .eq('id', id)
+      .single();
+
+    if (getError || !producto) return res.status(404).json({ error: 'Producto no encontrado' });
+
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.code === '23503') {
+        return res.status(409).json({ error: 'No se puede eliminar el producto porque tiene registros asociados (pedidos, combos, recetas). Puede ocultarlo (No disponible) en su lugar.' });
+      }
+      throw error;
+    }
+
+    await supabase.from('bitacora_permisos').insert({
+      usuario_id: req.user.id,
+      accion: 'ELIMINAR_PRODUCTO',
+      descripcion: `Producto "${producto.nombre}" eliminado permanentemente`
+    });
+
+    res.json({ message: 'Producto eliminado permanentemente', producto });
+  } catch (e) {
+    console.error('Error eliminando producto:', e);
+    res.status(500).json({ error: 'Error al eliminar producto' });
+  }
+};
+
 module.exports = {
   obtenerCategorias, crearCategoria,
   obtenerProductos, obtenerProductoPorId, crearProducto, actualizarProducto,
   toggleDisponible, obtenerHistorialPrecios,
   actualizarPreciosMasivo, revertirUltimoPrecio,
-  obtenerCombos, crearCombo, actualizarCombo, toggleCombo
+  obtenerCombos, crearCombo, actualizarCombo, toggleCombo,
+  eliminarProducto
 };

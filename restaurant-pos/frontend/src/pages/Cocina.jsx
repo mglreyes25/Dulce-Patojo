@@ -6,7 +6,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import { API_URL, SOCKET_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
-import { Clock, Flame, CheckCircle2 } from 'lucide-react';
+import { Clock, Flame, CheckCircle2, ChefHat, X } from 'lucide-react';
 
 const ESTADOS = {
   pendiente:      { label: 'Pendiente',     color: '#f1c40f', icon: '⏳' },
@@ -20,7 +20,10 @@ function Cocina() {
   const [usuario, setUsuario] = useState(null);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
-   const [sondeoActivo, setSondeoActivo] = useState(true);
+  const [sondeoActivo, setSondeoActivo] = useState(true);
+  const [recetaModal, setRecetaModal] = useState(null);
+  const [recetaData, setRecetaData] = useState([]);
+  const [cargandoReceta, setCargandoReceta] = useState(false);
   const navigate = useNavigate();
   const { addToast } = useToast();
   const audioRef = useRef(null);
@@ -96,6 +99,28 @@ function Cocina() {
     return `${Math.floor(min / 60)}h ${min % 60}m`;
   };
 
+  const verReceta = async (productoNombre, productoId) => {
+    if (!productoId) return;
+    setCargandoReceta(true);
+    setRecetaModal(productoNombre);
+    try {
+      const res = await axios.get(`${API_URL}/recetas`, {
+        params: { producto_id: productoId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRecetaData(res.data || []);
+    } catch {
+      setRecetaData([]);
+    } finally {
+      setCargandoReceta(false);
+    }
+  };
+
+  const cerrarReceta = () => {
+    setRecetaModal(null);
+    setRecetaData([]);
+  };
+
   if (!usuario) return null;
 
   const pedidosPendientes = pedidos.filter(p => p.estado === 'recibido' || p.estado === 'pendiente');
@@ -120,6 +145,54 @@ function Cocina() {
 
         <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+AgH9/f3+AgH+AgH9/f4CAf39/f4B/f3+AgH9/gH9/f3+AgH+AgH+AgH9/f39/gH9/f3+AgH9/gH9/f3+Af3+Af39/f39/gH9/f4B/f3+Af3+Af3+Af4B/f3+AgH9/f4B/f4B/f39/f3+Af38=" preload="auto" />
 
+        {/* ── Modal Receta ── */}
+        {recetaModal && (
+          <div className="modal-overlay" onClick={cerrarReceta}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>
+                  <ChefHat size={18} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                  Receta: {recetaModal}
+                </h3>
+                <button onClick={cerrarReceta} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
+              {cargandoReceta ? (
+                <p className="loading-text">Cargando receta...</p>
+              ) : recetaData.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+                  Este producto no tiene receta registrada
+                </p>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Ingrediente</th>
+                      <th>Cantidad</th>
+                      <th>Unidad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recetaData.map((r, i) => (
+                      <tr key={r.id || i}>
+                        <td>{r.ingredientes?.nombre || '—'}</td>
+                        <td>{Number(r.cantidad)}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{r.ingredientes?.unidad || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <button
+                className="btn"
+                style={{ width: '100%', marginTop: '16px', background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={cerrarReceta}
+              >Cerrar</button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="loading-text">Cargando pedidos...</div>
         ) : (
@@ -137,7 +210,7 @@ function Cocina() {
               )}
               <div className="kitchen-column-body">
                 {pedidosPendientes.map(p => (
-                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} onVerReceta={verReceta} />
                 ))}
               </div>
             </div>
@@ -155,7 +228,7 @@ function Cocina() {
               )}
               <div className="kitchen-column-body">
                 {pedidosEnPreparacion.map(p => (
-                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} onVerReceta={verReceta} />
                 ))}
               </div>
             </div>
@@ -173,7 +246,7 @@ function Cocina() {
               )}
               <div className="kitchen-column-body">
                 {pedidosListos.map(p => (
-                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} onVerReceta={verReceta} />
                 ))}
               </div>
             </div>
@@ -184,10 +257,16 @@ function Cocina() {
   );
 }
 
-function PedidoCard({ pedido, onEstado, tiempoFn }) {
+function PedidoCard({ pedido, onEstado, tiempoFn, onVerReceta }) {
   const isNew = ['recibido', 'pendiente'].includes(pedido.estado)
     && pedido._receivedAt
     && (Date.now() - pedido._receivedAt) <= 10000;
+
+  // Solo mostrar receta para productos individuales, no combos/promos
+  const getProductoId = (item) => {
+    if (item.tipo_item === 'producto' && item.producto_id) return item.producto_id;
+    return null;
+  };
 
   return (
     <div className={`kitchen-card kitchen-card--${pedido.estado}${isNew ? ' kitchen-card--new' : ''}`}>
@@ -202,6 +281,19 @@ function PedidoCard({ pedido, onEstado, tiempoFn }) {
         <p className="kitchen-client">{pedido.cliente_nombre}</p>
       )}
 
+      {/* Notas adicionales del pedido */}
+      {pedido.notas && (
+        <div style={{
+          background: 'var(--caramel-dim)', borderRadius: '6px', padding: '8px 10px',
+          marginBottom: '10px', fontSize: '13px', border: '1px solid rgba(212,163,115,0.25)'
+        }}>
+          <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--caramel)', marginBottom: '2px' }}>
+            📝 Notas del pedido
+          </div>
+          {pedido.notas}
+        </div>
+      )}
+
       <div className="kitchen-items">
         {(pedido.pedido_items || []).map((item, i) => (
           <div key={i} className="kitchen-item-row">
@@ -209,6 +301,15 @@ function PedidoCard({ pedido, onEstado, tiempoFn }) {
               {item.cantidad}x {item.nombre}
             </span>
             {item.notas && <span className="kitchen-note">{item.notas}</span>}
+            {onVerReceta && getProductoId(item) && (
+              <button
+                className="kitchen-recipe-btn"
+                onClick={() => onVerReceta(item.nombre, getProductoId(item))}
+                title="Ver receta"
+              >
+                <ChefHat size={13} />
+              </button>
+            )}
           </div>
         ))}
       </div>

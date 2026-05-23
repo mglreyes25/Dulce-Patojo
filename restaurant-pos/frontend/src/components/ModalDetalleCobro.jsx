@@ -144,9 +144,14 @@ export default function ModalDetalleCobro({
               <h4 className="cobros-detail-section-title">Items</h4>
               {pedido.items_resumen?.map((item, i) => (
                 <div key={item.id || i} className="cobros-detail-item">
-                  <span className="cobros-detail-item-name">
-                    {item.cantidad}x {item.nombre}
-                  </span>
+                  <div className="cobros-detail-item-info">
+                    <span className="cobros-detail-item-name">
+                      {item.cantidad}x {item.nombre}
+                    </span>
+                    {item.notas && (
+                      <span className="cobros-detail-item-nota">📝 {item.notas}</span>
+                    )}
+                  </div>
                   <span className="cobros-detail-item-price">
                     ${(Number(item.precio_unitario) * Number(item.cantidad)).toFixed(2)}
                   </span>
@@ -156,6 +161,18 @@ export default function ModalDetalleCobro({
                 <p className="cobros-detail-empty">Sin items</p>
               )}
             </div>
+
+            {pedido.notas && (
+              <div style={{
+                background: 'var(--caramel-dim)', borderRadius: '8px', padding: '10px 14px',
+                marginBottom: '16px', fontSize: '13px', border: '1px solid rgba(212,163,115,0.25)'
+              }}>
+                <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--caramel)', marginBottom: '2px' }}>
+                  📝 Notas adicionales del pedido
+                </div>
+                {pedido.notas}
+              </div>
+            )}
 
             <div className="cobros-detail-totals">
               <div className="cobros-detail-total-row">

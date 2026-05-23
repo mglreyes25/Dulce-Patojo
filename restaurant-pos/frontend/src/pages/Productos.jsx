@@ -144,6 +144,11 @@ export default function Productos() {
   const [showHistorial, setShowHistorial] = useState(null);
   const [historial, setHistorial]         = useState([]);
 
+  // Modal eliminar producto
+  const [showEliminarModal, setShowEliminarModal] = useState(false);
+  const [eliminarTarget, setEliminarTarget]       = useState(null);
+  const [eliminando, setEliminando]               = useState(false);
+
   // Modal precios masivos
   const [showPreciosModal, setShowPreciosModal] = useState(false);
   const [preciosForm, setPreciosForm] = useState({ categoria_id: '', tipo: 'porcentaje', valor: '' });
@@ -245,6 +250,21 @@ export default function Productos() {
       await axios.patch(`${API}/productos/${p.id}/toggle`, {}, { headers });
       cargarTodo();
     } catch { setError('Error al cambiar disponibilidad'); }
+  };
+
+  const handleEliminarProducto = async () => {
+    setEliminando(true);
+    try {
+      await axios.delete(`${API}/productos/${eliminarTarget.id}`, { headers });
+      setShowEliminarModal(false);
+      setEliminarTarget(null);
+      cargarTodo();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al eliminar producto');
+      setShowEliminarModal(false);
+    } finally {
+      setEliminando(false);
+    }
   };
 
   const verHistorial = async (p) => {
@@ -518,6 +538,13 @@ export default function Productos() {
                               onClick={() => revertirPrecio(p)}
                             >
                               ↩ Revertir
+                            </button>
+                            <button
+                              className="btn-small"
+                              style={{ background: 'var(--red-bg)', color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)' }}
+                              onClick={() => { setEliminarTarget(p); setShowEliminarModal(true); }}
+                            >
+                              �️ Eliminar
                             </button>
                           </td>
                         )}
@@ -885,6 +912,38 @@ export default function Productos() {
                 disabled={aplicandoPrecios}
               >
                 {aplicandoPrecios ? 'Aplicando...' : '💲 Aplicar Cambio'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal eliminar producto ── */}
+      {showEliminarModal && (
+        <div className="modal-overlay" onClick={() => setShowEliminarModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: '#e74c3c' }}>🗑️ Eliminar Producto</h3>
+
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              ¿Estás seguro de eliminar permanentemente <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
+            </p>
+            <p style={{ fontSize: '13px', color: '#e74c3c', background: 'var(--red-bg)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>
+              ⚠️ Esta acción no se puede deshacer. Si el producto está en pedidos, combos o recetas, no se podrá eliminar.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                className="btn"
+                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={() => setShowEliminarModal(false)}
+              >Cancelar</button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: '#c0392b', color: '#fff', border: '1px solid #e74c3c' }}
+                onClick={handleEliminarProducto}
+                disabled={eliminando}
+              >
+                {eliminando ? 'Eliminando…' : '🗑️ Eliminar Permanentemente'}
               </button>
             </div>
           </div>
