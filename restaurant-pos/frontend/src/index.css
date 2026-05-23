@@ -2374,3 +2374,84 @@ a.nav-disabled {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ══ TICKET ACTION BUTTONS (Print / Download) ══════════════════ */
+.pos-ticket-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pos-btn-ticket {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 48px;
+}
+
+.pos-btn-ticket--print {
+  background: #3498db;
+  color: #fff;
+  border-color: #3498db;
+}
+
+.pos-btn-ticket--print:hover {
+  background: #2980b9;
+}
+
+.pos-btn-ticket--download {
+  background: #27ae60;
+  color: #fff;
+  border-color: #27ae60;
+}
+
+.pos-btn-ticket--download:hover {
+  background: #219a52;
+}
+
+/* ══ DISPATCH: secondary button & card actions ═════════════════ */
+.dispatch-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dispatch-btn-secondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+
+.dispatch-btn-secondary:hover {
+  border-color: var(--gold);
+  color: var(--gold-light);
+  background: var(--gold-dim);
+}
+
+.dispatch-btn-secondary:active {
+  transform: scale(0.98);
+}

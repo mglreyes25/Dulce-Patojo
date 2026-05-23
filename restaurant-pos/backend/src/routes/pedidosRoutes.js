@@ -5,7 +5,7 @@ const { requireRol } = require('../middleware/auth');
 const {
   obtenerPedidos, obtenerPedidoPorId, obtenerProximoTicket,
   crearPedido, cambiarEstadoPedido,
-  procesarPago, obtenerTicket, reimprimirTicket,
+  procesarPago, obtenerTicket, reimprimirTicket, generarTicketHTML,
   probarMesa, obtenerResumen,
 } = require('../controllers/pedidosController');
 
@@ -17,6 +17,7 @@ router.post('/',                auth, requireRol('Admin', 'Cajero'), crearPedido
 router.patch('/:id/estado',     auth, cambiarEstadoPedido);
 router.post('/:id/pagar',       auth, requireRol('Admin', 'Cajero'), procesarPago);
 router.get('/:id/ticket',       auth, obtenerTicket);
+router.get('/:id/ticket/html',  auth, generarTicketHTML);
 router.post('/:id/reimprimir',  auth, requireRol('Admin', 'Cajero'), reimprimirTicket);
 router.post('/diagnostico/mesa', auth, probarMesa);
 
