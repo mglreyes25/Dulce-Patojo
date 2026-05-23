@@ -5,6 +5,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
+import Pagination from '../components/Pagination';
 import API from '../utils/api';
 
 function Ingredientes() {
@@ -12,6 +13,10 @@ function Ingredientes() {
   const [proveedores, setProveedores]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const [busqueda, setBusqueda]         = useState('');
+  const [currentPage, setCurrentPage]   = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [busqueda]);
+  const ITEMS_PER_PAGE = 10;
+
   const [showModal, setShowModal]       = useState(false);
   const [editando, setEditando]         = useState(null);
   const [guardando, setGuardando]       = useState(false);
@@ -113,6 +118,12 @@ function Ingredientes() {
     !busqueda || i.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / ITEMS_PER_PAGE));
+  const paginados = filtrados.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const bajosStock = ingredientes.filter(i => i.stock_minimo > 0 && Number(i.stock) <= Number(i.stock_minimo));
 
   return (
@@ -160,7 +171,7 @@ function Ingredientes() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map(i => {
+                {paginados.map(i => {
                   const bajo = i.stock_minimo > 0 && Number(i.stock) <= Number(i.stock_minimo);
                   return (
                     <tr key={i.id}>
@@ -191,6 +202,7 @@ function Ingredientes() {
                 })}
               </tbody>
             </table>
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </div>
         )}
 

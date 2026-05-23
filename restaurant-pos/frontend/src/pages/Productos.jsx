@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
+import Pagination from '../components/Pagination';
 import API from '../utils/api';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -119,6 +120,11 @@ export default function Productos() {
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroDisponible, setFiltroDisponible] = useState('');
 
+  // Paginación
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [busqueda, filtroCategoria, filtroDisponible]);
+
   // Modal producto
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando]   = useState(null);
@@ -183,6 +189,12 @@ export default function Productos() {
       return mb && mc && md;
     });
   }, [productos, busqueda, filtroCategoria, filtroDisponible]);
+
+  const totalPages = Math.max(1, Math.ceil(productosFiltrados.length / ITEMS_PER_PAGE));
+  const paginados = productosFiltrados.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   /* ── Acciones Producto ── */
   const abrirCrear = () => {
@@ -433,6 +445,7 @@ export default function Productos() {
                   )}
                 </div>
               ) : (
+                <>
                 <table className="table">
                   <thead>
                     <tr>
@@ -445,7 +458,7 @@ export default function Productos() {
                     </tr>
                   </thead>
                   <tbody>
-                    {productosFiltrados.map(p => (
+                    {paginados.map(p => (
                       <tr key={p.id}>
                         <td>
                           {p.imagen_url ? (
@@ -512,6 +525,8 @@ export default function Productos() {
                     ))}
                   </tbody>
                 </table>
+                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                </>
               )}
             </div>
           </>

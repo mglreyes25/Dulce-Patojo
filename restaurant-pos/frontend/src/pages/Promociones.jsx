@@ -336,6 +336,90 @@ export default function Promociones() {
         )}
       </main>
 
+      {/* Modal crear / editar promoción */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal modal-wide" onClick={e => e.stopPropagation()} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3>{editando ? 'Editar Promoción' : 'Nueva Promoción'}</h3>
+
+            {error && <div className="message error-message">{error}</div>}
+
+            <div className="form-group">
+              <label>Nombre *</label>
+              <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Nombre de la promoción" />
+            </div>
+
+            <div className="form-group">
+              <label>Descripción</label>
+              <input value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} placeholder="Descripción opcional" />
+            </div>
+
+            <div className="form-group">
+              <label>Tipo *</label>
+              <select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value, valor: '', producto_id: '', categoria_id: '' })}>
+                {Object.entries(TIPOS).map(([key, t]) => (
+                  <option key={key} value={key}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {(form.tipo === 'descuento_porcentaje' || form.tipo === 'happy_hour') && (
+              <div className="form-group">
+                <label>Valor del descuento (%) *</label>
+                <input type="number" min="1" max="100" value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} placeholder="Ej: 15" />
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>Aplicar a producto específico (opcional)</label>
+              <select value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value, categoria_id: '' })}>
+                <option value="">Todos los productos</option>
+                {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>O a categoría específica (opcional)</label>
+              <select value={form.categoria_id} onChange={e => setForm({ ...form, categoria_id: e.target.value, producto_id: '' })}>
+                <option value="">Todas las categorías</option>
+                {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+
+            {form.tipo === 'happy_hour' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="form-group">
+                  <label>Hora inicio *</label>
+                  <input type="time" value={form.hora_inicio} onChange={e => setForm({ ...form, hora_inicio: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Hora fin *</label>
+                  <input type="time" value={form.hora_fin} onChange={e => setForm({ ...form, hora_fin: e.target.value })} />
+                </div>
+              </div>
+            )}
+
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.automatica} onChange={e => setForm({ ...form, automatica: e.target.checked })} />
+                Aplicación automática
+              </label>
+              <small style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                Si se activa, la promoción se aplicará automáticamente en la caja.
+              </small>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button className="btn" style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={guardar} disabled={guardando}>
+                {guardando ? 'Guardando...' : editando ? 'Actualizar Promoción' : 'Crear Promoción'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmModal
         open={!!deleteConfirm}
         title="Eliminar promoción"

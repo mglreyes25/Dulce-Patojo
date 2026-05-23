@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
+import Pagination from '../components/Pagination';
 
 const rolBadge = (rol) => {
   const map = {
@@ -33,6 +34,11 @@ function Usuarios() {
   const [busqueda, setBusqueda]         = useState('');
   const [filtroRol, setFiltroRol]       = useState('Todos');
   const [filtroEstado, setFiltroEstado] = useState('Todos');
+
+  // Paginación
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [busqueda, filtroRol, filtroEstado]);
 
   const navigate = useNavigate();
   const token   = localStorage.getItem('token');
@@ -76,6 +82,12 @@ function Usuarios() {
       return matchBusqueda && matchRol && matchEstado;
     });
   }, [usuarios, busqueda, filtroRol, filtroEstado]);
+
+  const totalPages = Math.max(1, Math.ceil(usuariosFiltrados.length / ITEMS_PER_PAGE));
+  const paginados = usuariosFiltrados.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const abrirCrear = () => {
     setEditando(null);
@@ -255,7 +267,7 @@ function Usuarios() {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuariosFiltrados.map((u) => (
+                  {paginados.map((u) => (
                     <tr key={u.id}>
                       <td><strong>{u.nombre}</strong></td>
                       <td style={{ color: 'var(--text-muted)' }}>{u.correo}</td>
@@ -282,6 +294,7 @@ function Usuarios() {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
           )}
         </div>

@@ -82,10 +82,10 @@ function Despacho() {
     <div className="dashboard-page">
       <Sidebar usuario={usuario} activeRoute="despacho" />
 
-      <main className="main-content" style={{ padding: '24px 28px' }}>
-        <div className="page-header" style={{ marginBottom: 24 }}>
+      <main className="main-content dispatch-page">
+        <div className="page-header dispatch-header">
           <div>
-            <h2>🚀 Despacho</h2>
+            <h2>Despacho</h2>
             <p>Pedidos listos para entregar — {listos.length} pendiente(s)</p>
           </div>
         </div>
@@ -94,36 +94,32 @@ function Despacho() {
           <div className="loading-text">Cargando pedidos...</div>
         ) : (
           <>
-            <h3 style={{ fontSize: 14, color: '#27ae60', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-              ✅ Listos para entregar ({listos.length})
+            <h3 className="dispatch-section-title">
+              Listos para entregar ({listos.length})
             </h3>
             {listos.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>No hay pedidos listos</p>
+              <p className="dispatch-empty">No hay pedidos listos</p>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, marginBottom: 32 }}>
+              <div className="dispatch-grid">
                 {listos.map(p => (
-                  <div key={p.id} style={{
-                    background: 'var(--bg2)', border: '1px solid rgba(39,174,96,0.3)',
-                    borderRadius: 12, padding: 24, borderLeft: '4px solid #27ae60',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                      <span style={{ fontSize: 24, fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'var(--gold-light)' }}>
+                  <div key={p.id} className="dispatch-card">
+                    <div className="dispatch-card-header">
+                      <span className="dispatch-ticket">
                         #{(p.numero_ticket || p.id).toString().padStart(4, '0')}
                       </span>
                       {p.cliente_nombre && (
-                        <span style={{ fontSize: 13, color: 'var(--caramel)' }}>🧑 {p.cliente_nombre}</span>
+                        <span className="dispatch-client">{p.cliente_nombre}</span>
                       )}
                     </div>
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginBottom: 16 }}>
+                    <div className="dispatch-items">
                       {(p.pedido_items || []).map((item, i) => (
-                        <div key={i} style={{ padding: '2px 0', fontSize: 13, color: 'var(--text)' }}>
+                        <div key={i} className="dispatch-item">
                           {item.cantidad}x {item.nombre}
                         </div>
                       ))}
                     </div>
-                    <button className="btn" style={{ width: '100%', background: '#27ae60', color: '#fff' }}
-                      onClick={() => entregar(p.id)}>
-                      🚚 Entregado
+                    <button className="dispatch-btn" onClick={() => entregar(p.id)}>
+                      Entregado
                     </button>
                   </div>
                 ))}
@@ -132,18 +128,14 @@ function Despacho() {
 
             {entregados.length > 0 && (
               <>
-                <h3 style={{ fontSize: 14, color: '#8a8070', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                  📋 Entregados recientes ({entregados.length})
+                <h3 className="dispatch-section-subtitle">
+                  Entregados recientes ({entregados.length})
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="dispatch-recent">
                   {entregados.slice(0, 10).map(p => (
-                    <div key={p.id} style={{
-                      background: 'var(--bg2)', border: '1px solid var(--border)',
-                      borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
-                      opacity: 0.6,
-                    }}>
-                      <span style={{ fontWeight: 600 }}>#{p.numero_ticket || p.id}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                    <div key={p.id} className="dispatch-recent-row">
+                      <span className="dispatch-recent-ticket">#{p.numero_ticket || p.id}</span>
+                      <span className="dispatch-recent-time">
                         {new Date(p.actualizado_en || p.creado_en).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>

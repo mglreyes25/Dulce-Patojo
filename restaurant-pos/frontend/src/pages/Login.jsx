@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
 
 import { API_URL } from '../utils/api';
@@ -45,7 +46,8 @@ function Login() {
     <div className="auth-page">
       <div className="auth-left">
         <div className="auth-left-content">
-          <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 96, marginBottom: 24 }} />
+          <img src="/images/logo.jpg" alt="Dulce Patojo" className="auth-logo" />
+          <h1 className="auth-brand">Dulce Patojo</h1>
           <p className="auth-tagline">
             Sistema Administrativo y Contable para tu cafetería.
             Control total de pedidos, usuarios y operaciones en un solo lugar.
@@ -54,19 +56,15 @@ function Login() {
       </div>
 
       <div className="auth-right">
-        <div className="auth-container">
-          <div style={{ marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
-              Iniciar Sesión
-            </h2>
-            <p className="subtitle" style={{ marginTop: '6px' }}>
-              Ingresa tus credenciales para continuar
-            </p>
+        <div className="auth-card">
+          <div className="auth-header">
+            <h2 className="auth-title">Iniciar Sesión</h2>
+            <p className="auth-subtitle">Ingresa tus credenciales para continuar</p>
           </div>
 
           {error && <div className="message error-message">{error}</div>}
 
-          <form onSubmit={handleLogin} className="auth-form">
+          <form onSubmit={handleLogin} className="auth-form" aria-busy={loading}>
             <div className="form-group">
               <label htmlFor="login-correo">Correo Electrónico</label>
               <input
@@ -91,15 +89,18 @@ function Login() {
             </div>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary btn-full"
               disabled={loading}
-              style={{ marginTop: '8px', width: '100%' }}
             >
-              {loading ? 'Iniciando sesión…' : 'Iniciar Sesión →'}
+              <span className="btn-content">
+                {loading && <Loader2 size={18} className="btn-spinner" />}
+                <span>{loading ? 'Iniciando sesión…' : 'Iniciar Sesión'}</span>
+                {!loading && <ArrowRight size={18} className="btn-icon" />}
+              </span>
             </button>
           </form>
 
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '20px' }}>
+          <p className="auth-note">
             ¿No tienes acceso? Contacta al administrador del sistema.
           </p>
         </div>

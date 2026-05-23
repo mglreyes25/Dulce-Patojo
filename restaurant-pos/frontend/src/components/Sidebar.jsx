@@ -13,8 +13,11 @@ const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogou
   <>
     <div className="sidebar-logo">
       {!collapsed && (
-        <a href="/dashboard" style={{ textDecoration: 'none' }}>
-          <img src="/logo.svg" alt="Dulce Patojo" style={{ height: 48, display: 'block' }} />
+        <a href="/dashboard" className="sidebar-logo-link">
+          <div className="sidebar-logo-container">
+            <img src="/images/logo.jpg" alt="Dulce Patojo" className="sidebar-logo-img" />
+            <span className="sidebar-logo-text">Dulce patojo</span>
+          </div>
         </a>
       )}
     </div>
@@ -55,11 +58,11 @@ const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogou
         </div>
       )}
       <button
-        className="btn-logout"
+        className={`btn-logout${collapsed ? ' btn-logout--collapsed' : ''}`}
         onClick={handleLogout}
         title={collapsed ? 'Cerrar Sesión' : undefined}
       >
-        <LogOut size={16} style={{ marginRight: collapsed ? 0 : 8, verticalAlign: 'middle' }} />
+        <LogOut size={16} className="btn-logout-icon" />
         {!collapsed && ' Cerrar Sesión'}
       </button>
     </div>
@@ -145,7 +148,7 @@ export default function Sidebar({ usuario, activeRoute }) {
         </div>
       )}
 
-      <aside className="sidebar sidebar-desktop">
+      <aside className={`sidebar sidebar-desktop${collapsed ? ' sidebar-collapsed' : ''}`}>
         <button
           className="hamburger-btn hamburger-desktop"
           onClick={() => setCollapsed((c) => !c)}

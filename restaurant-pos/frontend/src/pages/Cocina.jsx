@@ -6,6 +6,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import { API_URL, SOCKET_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
+import { Clock, Flame, CheckCircle2 } from 'lucide-react';
 
 const ESTADOS = {
   pendiente:      { label: 'Pendiente',     color: '#f1c40f', icon: '⏳' },
@@ -19,7 +20,7 @@ function Cocina() {
   const [usuario, setUsuario] = useState(null);
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sondeoActivo, setSondeoActivo] = useState(true);
+   const [sondeoActivo, setSondeoActivo] = useState(true);
   const navigate = useNavigate();
   const { addToast } = useToast();
   const audioRef = useRef(null);
@@ -63,7 +64,8 @@ function Cocina() {
     socket.emit('join', 'Cocinero');
 
     socket.on('nuevo_pedido', (pedido) => {
-      setPedidos(prev => [pedido, ...prev]);
+      const timestamped = { ...pedido, _receivedAt: Date.now() };
+      setPedidos(prev => [timestamped, ...prev]);
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(() => {});
@@ -104,16 +106,15 @@ function Cocina() {
     <div className="dashboard-page">
       <Sidebar usuario={usuario} activeRoute="cocina" />
 
-      <main className="main-content" style={{ padding: '24px 28px' }}>
-        <div className="page-header" style={{ marginBottom: 24 }}>
+      <main className="main-content kitchen-page">
+        <div className="page-header kitchen-header">
           <div>
-            <h2>👨‍🍳 Cocina</h2>
+            <h2>Cocina</h2>
             <p>Pedidos en tiempo real — {pedidos.length} activo(s)</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {sondeoActivo ? '🟢 En vivo' : '🔴 Sin conexión'}
-            </span>
+          <div className="kitchen-live">
+            <span className={`kitchen-live-dot${sondeoActivo ? ' active' : ''}`} />
+            <span className="kitchen-live-text">{sondeoActivo ? 'En vivo' : 'Sin conexión'}</span>
           </div>
         </div>
 
@@ -122,44 +123,59 @@ function Cocina() {
         {loading ? (
           <div className="loading-text">Cargando pedidos...</div>
         ) : (
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-            {/* Columna: Pendientes */}
-            <div style={{ flex: 1, minWidth: 300 }}>
-              <h3 style={{ fontSize: 14, color: '#f1c40f', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                ⏳ Pendientes ({pedidosPendientes.length})
-              </h3>
+          <div className="kitchen-board">
+            <div className="kitchen-column">
+              <div className="kitchen-column-header pending">
+                <div className="kitchen-column-title">
+                  <Clock size={18} />
+                  Pendientes
+                </div>
+                <span className="kitchen-column-count">{pedidosPendientes.length}</span>
+              </div>
               {pedidosPendientes.length === 0 && (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>Sin pedidos pendientes</p>
+                <p className="kitchen-empty">Sin pedidos pendientes</p>
               )}
-              {pedidosPendientes.map(p => (
-                <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
-              ))}
+              <div className="kitchen-column-body">
+                {pedidosPendientes.map(p => (
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                ))}
+              </div>
             </div>
 
-            {/* Columna: En Preparación */}
-            <div style={{ flex: 1, minWidth: 300 }}>
-              <h3 style={{ fontSize: 14, color: '#e67e22', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                🔥 En Preparación ({pedidosEnPreparacion.length})
-              </h3>
+            <div className="kitchen-column">
+              <div className="kitchen-column-header cooking">
+                <div className="kitchen-column-title">
+                  <Flame size={18} />
+                  En Preparación
+                </div>
+                <span className="kitchen-column-count">{pedidosEnPreparacion.length}</span>
+              </div>
               {pedidosEnPreparacion.length === 0 && (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>Sin pedidos en preparación</p>
+                <p className="kitchen-empty">Sin pedidos en preparación</p>
               )}
-              {pedidosEnPreparacion.map(p => (
-                <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
-              ))}
+              <div className="kitchen-column-body">
+                {pedidosEnPreparacion.map(p => (
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                ))}
+              </div>
             </div>
 
-            {/* Columna: Listos */}
-            <div style={{ flex: 1, minWidth: 300 }}>
-              <h3 style={{ fontSize: 14, color: '#27ae60', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                ✅ Listos ({pedidosListos.length})
-              </h3>
+            <div className="kitchen-column">
+              <div className="kitchen-column-header ready">
+                <div className="kitchen-column-title">
+                  <CheckCircle2 size={18} />
+                  Listos
+                </div>
+                <span className="kitchen-column-count">{pedidosListos.length}</span>
+              </div>
               {pedidosListos.length === 0 && (
-                <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: 20 }}>Sin pedidos listos</p>
+                <p className="kitchen-empty">Sin pedidos listos</p>
               )}
-              {pedidosListos.map(p => (
-                <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
-              ))}
+              <div className="kitchen-column-body">
+                {pedidosListos.map(p => (
+                  <PedidoCard key={p.id} pedido={p} onEstado={cambiarEstado} tiempoFn={tiempoTranscurrido} />
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -169,48 +185,43 @@ function Cocina() {
 }
 
 function PedidoCard({ pedido, onEstado, tiempoFn }) {
-  const info = ESTADOS[pedido.estado] || ESTADOS.pendiente;
+  const isNew = ['recibido', 'pendiente'].includes(pedido.estado)
+    && pedido._receivedAt
+    && (Date.now() - pedido._receivedAt) <= 10000;
 
   return (
-    <div style={{
-      background: 'var(--bg2)', border: `1px solid ${info.color}44`,
-      borderRadius: 12, padding: 20, marginBottom: 12,
-      borderLeft: `4px solid ${info.color}`,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Playfair Display', serif", color: 'var(--gold-light)' }}>
+    <div className={`kitchen-card kitchen-card--${pedido.estado}${isNew ? ' kitchen-card--new' : ''}`}>
+      <div className="kitchen-card-header">
+        <span className="kitchen-ticket">
           #{(pedido.numero_ticket || pedido.id).toString().padStart(4, '0')}
         </span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          {tiempoFn(pedido.creado_en)}
-        </span>
+        <span className="kitchen-time">{tiempoFn(pedido.creado_en)}</span>
       </div>
 
       {pedido.cliente_nombre && (
-        <p style={{ fontSize: 12, color: 'var(--caramel)', marginBottom: 8 }}>🧑 {pedido.cliente_nombre}</p>
+        <p className="kitchen-client">{pedido.cliente_nombre}</p>
       )}
 
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, marginBottom: 12 }}>
+      <div className="kitchen-items">
         {(pedido.pedido_items || []).map((item, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 13 }}>
-            <span style={{ color: 'var(--text)' }}>
+          <div key={i} className="kitchen-item-row">
+            <span className="kitchen-item-name">
               {item.cantidad}x {item.nombre}
             </span>
-            {item.notas && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>📝 {item.notas}</span>}
+            {item.notas && <span className="kitchen-note">{item.notas}</span>}
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="kitchen-actions">
         {(pedido.estado === 'recibido' || pedido.estado === 'pendiente') && (
-          <button className="btn-small" style={{ background: 'rgba(230,126,34,0.2)', color: '#e67e22', border: '1px solid rgba(230,126,34,0.3)' }}
-            onClick={() => onEstado(pedido.id, 'en_preparacion')}>
-            🔥 Iniciar
+          <button className="kitchen-btn kitchen-btn-start" onClick={() => onEstado(pedido.id, 'en_preparacion')}>
+            Iniciar Preparación
           </button>
         )}
         {pedido.estado === 'en_preparacion' && (
-          <button className="btn-small btn-success" onClick={() => onEstado(pedido.id, 'listo')}>
-            ✅ Marcar Listo
+          <button className="kitchen-btn kitchen-btn-ready" onClick={() => onEstado(pedido.id, 'listo')}>
+            Marcar Listo
           </button>
         )}
         {pedido.estado === 'listo' && (

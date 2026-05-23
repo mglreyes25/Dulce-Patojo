@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
+import Pagination from '../components/Pagination';
 import API from '../utils/api';
 
 export default function Inventario() {
@@ -11,6 +12,10 @@ export default function Inventario() {
   const [error, setError]               = useState('');
   const [busqueda, setBusqueda]         = useState('');
   const [filtroStock, setFiltroStock]   = useState('todos');
+
+  const ITEMS_PER_PAGE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => { setCurrentPage(1); }, [busqueda, filtroStock]);
 
   const [showModal, setShowModal]         = useState(false);
   const [modalTipo, setModalTipo]         = useState('entrada');
@@ -57,6 +62,12 @@ export default function Inventario() {
       (filtroStock === 'ok' && !p.bajo_stock && !p.sin_stock);
     return mb && ms;
   });
+
+  const totalPages = Math.max(1, Math.ceil(inventarioFiltrado.length / ITEMS_PER_PAGE));
+  const paginados = inventarioFiltrado.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const abrirModal = (tipo) => {
     setModalTipo(tipo);
@@ -214,7 +225,7 @@ export default function Inventario() {
                   </tr>
                 </thead>
                 <tbody>
-                  {inventarioFiltrado.map(p => (
+                  {paginados.map(p => (
                     <tr key={p.id}>
                       <td>
                         <strong>{p.nombre}</strong>
@@ -280,6 +291,7 @@ export default function Inventario() {
                   ))}
                 </tbody>
               </table>
+              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
             </div>
           )}
         </div>
