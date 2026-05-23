@@ -83,67 +83,87 @@ function Despacho() {
       <Sidebar usuario={usuario} activeRoute="despacho" />
 
       <main className="main-content dispatch-page">
-        <div className="page-header dispatch-header">
+        <div className="dispatch-header">
           <div>
-            <h2>Despacho</h2>
-            <p>Pedidos listos para entregar — {listos.length} pendiente(s)</p>
+            <h2>🚀 Despacho</h2>
+            <p>Pedidos listos para entregar — <strong style={{color:'#2ecc71'}}>{listos.length}</strong> pendiente(s)</p>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:'8px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'20px',padding:'6px 14px'}}>
+            <span style={{width:'8px',height:'8px',borderRadius:'50%',background:'#2ecc71',boxShadow:'0 0 6px #2ecc71',display:'inline-block'}}/>
+            <span style={{fontSize:'12px',fontWeight:600,color:'var(--text-muted)'}}>En vivo</span>
           </div>
         </div>
 
         {loading ? (
-          <div className="loading-text">Cargando pedidos...</div>
+          <div className="loading-text" style={{paddingTop:'60px'}}>Cargando pedidos...</div>
         ) : (
-          <>
-            <h3 className="dispatch-section-title">
-              Listos para entregar ({listos.length})
-            </h3>
-            {listos.length === 0 ? (
-              <p className="dispatch-empty">No hay pedidos listos</p>
-            ) : (
-              <div className="dispatch-grid">
-                {listos.map(p => (
-                  <div key={p.id} className="dispatch-card">
-                    <div className="dispatch-card-header">
-                      <span className="dispatch-ticket">
-                        #{(p.numero_ticket || p.id).toString().padStart(4, '0')}
-                      </span>
-                      {p.cliente_nombre && (
-                        <span className="dispatch-client">{p.cliente_nombre}</span>
-                      )}
-                    </div>
-                    <div className="dispatch-items">
-                      {(p.pedido_items || []).map((item, i) => (
-                        <div key={i} className="dispatch-item">
-                          {item.cantidad}x {item.nombre}
+          <div className="dispatch-body">
+            <div className="dispatch-main">
+              <h3 className="dispatch-section-title">
+                Listos para entregar ({listos.length})
+              </h3>
+              {listos.length === 0 ? (
+                <p className="dispatch-empty">✅ Sin pedidos pendientes de entrega</p>
+              ) : (
+                <div className="dispatch-grid">
+                  {listos.map(p => (
+                    <div key={p.id} className="dispatch-card">
+                      <div className="dispatch-card-header">
+                        <span className="dispatch-ticket">
+                          #{(p.numero_ticket || p.id).toString().padStart(4, '0')}
+                        </span>
+                        {p.cliente_nombre && (
+                          <span className="dispatch-client">{p.cliente_nombre}</span>
+                        )}
+                      </div>
+                      {p.tipo && (
+                        <div style={{fontSize:'11px',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:'var(--text-muted)'}}>
+                          {p.tipo === 'en_mesa' ? `🍽️ Mesa ${p.mesa?.numero || ''}` : p.tipo === 'para_llevar' ? '🛍️ Para llevar' : p.tipo === 'domicilio' ? '🚴 Domicilio' : '🏃 Para recoger'}
                         </div>
-                      ))}
-                    </div>
-                    <button className="dispatch-btn" onClick={() => entregar(p.id)}>
-                      Entregado
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {entregados.length > 0 && (
-              <>
-                <h3 className="dispatch-section-subtitle">
-                  Entregados recientes ({entregados.length})
-                </h3>
-                <div className="dispatch-recent">
-                  {entregados.slice(0, 10).map(p => (
-                    <div key={p.id} className="dispatch-recent-row">
-                      <span className="dispatch-recent-ticket">#{p.numero_ticket || p.id}</span>
-                      <span className="dispatch-recent-time">
-                        {new Date(p.actualizado_en || p.creado_en).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      )}
+                      <div className="dispatch-items">
+                        {(p.pedido_items || []).map((item, i) => (
+                          <div key={i} className="dispatch-item">
+                            <span style={{color:'var(--gold-light)',fontWeight:700,minWidth:'24px'}}>{item.cantidad}x</span>
+                            {item.nombre}
+                          </div>
+                        ))}
+                      </div>
+                      <button className="dispatch-btn" onClick={() => entregar(p.id)}>
+                        ✓ Marcar Entregado
+                      </button>
                     </div>
                   ))}
                 </div>
-              </>
-            )}
-          </>
+              )}
+            </div>
+
+            <aside className="dispatch-aside">
+              <h3 className="dispatch-section-title" style={{color:'var(--text-muted)'}}>
+                Entregados hoy ({entregados.length})
+              </h3>
+              {entregados.length === 0 ? (
+                <p style={{color:'var(--text-dim)',fontSize:'13px',textAlign:'center',padding:'20px 0'}}>Sin entregas aún</p>
+              ) : (
+                <div className="dispatch-recent">
+                  {entregados.slice(0, 20).map(p => (
+                    <div key={p.id} className="dispatch-recent-row">
+                      <div>
+                        <span className="dispatch-recent-ticket">#{(p.numero_ticket || p.id).toString().padStart(4,'0')}</span>
+                        {p.cliente_nombre && <div style={{fontSize:'11px',color:'var(--text-dim)',marginTop:'2px'}}>{p.cliente_nombre}</div>}
+                      </div>
+                      <div style={{textAlign:'right'}}>
+                        <span className="dispatch-recent-time">
+                          {new Date(p.actualizado_en || p.creado_en).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <div style={{fontSize:'10px',color:'#2ecc71',marginTop:'2px'}}>✓ Entregado</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </div>
         )}
       </main>
     </div>
