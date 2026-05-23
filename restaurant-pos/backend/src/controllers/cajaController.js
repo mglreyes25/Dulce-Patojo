@@ -29,7 +29,22 @@ const obtenerCobrosPendientes = async (req, res) => {
         .select('*, mesa:mesas(numero), pedido_items(*)')
         .in('estado', ['listo', 'entregado'])
         .order('creado_en', { ascending: false });
-      return res.json({ data: fallback || [], total: fallback?.length || 0, page: 1, limit: Number(limit) });
+
+      // Normalizar a la misma estructura que vw_cobros_pendientes
+      const normalizados = (fallback || []).map(p => ({
+        ...p,
+        mesa_numero: p.mesa?.numero || null,
+        items_resumen: (p.pedido_items || []).map(pi => ({
+          id: pi.id,
+          nombre: pi.nombre,
+          cantidad: pi.cantidad,
+          precio_unitario: pi.precio_unitario,
+          tipo_item: pi.tipo_item,
+          notas: pi.notas,
+        })),
+      }));
+
+      return res.json({ data: normalizados, total: normalizados.length, page: 1, limit: Number(limit) });
     }
 
     res.json({

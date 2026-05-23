@@ -32,6 +32,11 @@ export default function ModalDetalleCobro({
   const headers = { Authorization: `Bearer ${token}` };
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
 
+    // Items: soporta items_resumen (view) y pedido_items (fallback)
+  const items = pedido.items_resumen?.length > 0 ? pedido.items_resumen
+    : pedido.pedido_items?.length > 0 ? pedido.pedido_items
+    : [];
+
   const totalPagar = Number(pedido.total_con_iva || pedido.total || 0);
   const totalConPropina = totalPagar + propina;
   const cambio = Math.max(0, Number(montoRecibido || 0) - totalConPropina);
@@ -114,7 +119,7 @@ export default function ModalDetalleCobro({
             </h3>
             <p className="cobros-detail-subtitle">
               {pedido.cliente_nombre && `Cliente: ${pedido.cliente_nombre}`}
-              {pedido.mesa_numero && ` — Mesa ${pedido.mesa_numero}`}
+              {(pedido.mesa_numero || pedido.mesa?.numero) && ` — Mesa ${pedido.mesa_numero || pedido.mesa?.numero}`}
               {pedido.tipo && ` — ${pedido.tipo}`}
             </p>
           </div>
@@ -142,7 +147,7 @@ export default function ModalDetalleCobro({
           <div className="cobros-detail-body">
             <div className="cobros-detail-items">
               <h4 className="cobros-detail-section-title">Items</h4>
-              {pedido.items_resumen?.map((item, i) => (
+              {items.map((item, i) => (
                 <div key={item.id || i} className="cobros-detail-item">
                   <div className="cobros-detail-item-info">
                     <span className="cobros-detail-item-name">
@@ -157,7 +162,7 @@ export default function ModalDetalleCobro({
                   </span>
                 </div>
               ))}
-              {(!pedido.items_resumen || pedido.items_resumen.length === 0) && (
+              {items.length === 0 && (
                 <p className="cobros-detail-empty">Sin items</p>
               )}
             </div>

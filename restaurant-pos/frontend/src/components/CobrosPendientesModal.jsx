@@ -122,8 +122,8 @@ export default function CobrosPendientesModal({
 
                     <div className="cobros-modal-card-body">
                       <div className="cobros-modal-card-meta">
-                        {p.mesa_numero && (
-                          <span className="cobros-modal-mesa">Mesa {p.mesa_numero}</span>
+                        {(p.mesa_numero || p.mesa?.numero) && (
+                          <span className="cobros-modal-mesa">Mesa {p.mesa_numero || p.mesa?.numero}</span>
                         )}
                         {p.cliente_nombre && (
                           <span className="cobros-modal-cliente">{p.cliente_nombre}</span>
@@ -136,9 +136,10 @@ export default function CobrosPendientesModal({
                         </span>
                       </div>
 
-                      {p.items_resumen && p.items_resumen.length > 0 && (
+                      {/* Items: soporta items_resumen (view) y pedido_items (fallback) */}
+                      {(p.items_resumen?.length > 0 || p.pedido_items?.length > 0) && (
                         <div className="cobros-modal-items-resumen">
-                          {p.items_resumen.map((item, i) => (
+                          {(p.items_resumen || p.pedido_items || []).map((item, i) => (
                             <span key={i} className="cobros-modal-item-tag">
                               {item.cantidad}x {item.nombre}
                               {item.notas && (
