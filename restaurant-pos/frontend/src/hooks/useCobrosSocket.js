@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
 import { SOCKET_URL } from '../utils/api';
+import useSocket from './useSocket';
 
 export default function useCobrosSocket({
   onCobroIniciado,
@@ -9,47 +9,18 @@ export default function useCobrosSocket({
   onNuevoPedidoCobrable,
   onCambioEstado,
 }) {
-  const socketRef = useRef(null);
-  const usuarioRef = useRef(null);
+  const handlersRef = useRef({ onCobroIniciado, onBloqueoLiberado, onPedidoPagado, onNuevoPedidoCobrable, onCambioEstado });
+  handlersRef.current = { onCobroIniciado, onBloqueoLiberado, onPedidoPagado, onNuevoPedidoCobrable, onCambioEstado };
 
-  useEffect(() => {
-    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-    usuarioRef.current = usuario;
-
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-    });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      if (usuario.rol) {
-        socket.emit('join', usuario.rol);
+  useSocket({
+    cobro_iniciado: (data) => handlersRef.current.onCobroIniciado?.(data),
+    bloqueo_liberado: (data) => handlersRef.current.onBloqueoLiberado?.(data),
+    pedido_pagado: (data) => handlersRef.current.onPedidoPagado?.(data),
+    cambio_estado: (data) => {
+      handlersRef.current.onCambioEstado?.(data);
+      if (data.estado === 'listo') {
+        handlersRef.current.onNuevoPedidoCobrable?.(data);
       }
-    });
-
-    socket.on('cobro_iniciado', (data) => {
-      if (onCobroIniciado) onCobroIniciado(data);
-    });
-
-    socket.on('bloqueo_liberado', (data) => {
-      if (onBloqueoLiberado) onBloqueoLiberado(data);
-    });
-
-    socket.on('pedido_pagado', (data) => {
-      if (onPedidoPagado) onPedidoPagado(data);
-    });
-
-    socket.on('cambio_estado', (data) => {
-      if (onCambioEstado) onCambioEstado(data);
-      if (onNuevoPedidoCobrable && data.estado === 'listo') {
-        onNuevoPedidoCobrable(data);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
-  return socketRef;
+    },
+  });
 }

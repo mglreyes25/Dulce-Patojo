@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Coffee } from 'lucide-react';
 import PasswordInput from '../components/PasswordInput';
-
 import { API_URL } from '../utils/api';
 
 const redirigirPorRol = (rol, navigate) => {
@@ -58,6 +57,9 @@ function Login() {
       <div className="auth-right">
         <div className="auth-card">
           <div className="auth-header">
+            <div className="auth-header-icon">
+              <Coffee size={22} />
+            </div>
             <h2 className="auth-title">Iniciar Sesión</h2>
             <p className="auth-subtitle">Ingresa tus credenciales para continuar</p>
           </div>
@@ -69,6 +71,7 @@ function Login() {
               <label htmlFor="login-correo">Correo Electrónico</label>
               <input
                 id="login-correo"
+                className="form-input"
                 type="email"
                 value={form.correo}
                 onChange={set('correo')}
@@ -92,11 +95,9 @@ function Login() {
               className="btn btn-primary btn-full"
               disabled={loading}
             >
-              <span className="btn-content">
-                {loading && <Loader2 size={18} className="btn-spinner" />}
-                <span>{loading ? 'Iniciando sesión…' : 'Iniciar Sesión'}</span>
-                {!loading && <ArrowRight size={18} className="btn-icon" />}
-              </span>
+              {loading && <Loader2 size={18} className="spin" />}
+              {loading ? 'Iniciando sesión…' : 'Iniciar Sesión'}
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 

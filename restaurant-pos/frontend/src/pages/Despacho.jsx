@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
-import { API_URL, SOCKET_URL } from '../utils/api';
+import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
-import { X, Printer, Download, Receipt } from 'lucide-react';
+import useSocket from '../hooks/useSocket';
+import { X, Printer, Download, Receipt, Loader2 } from 'lucide-react';
 
 function Despacho() {
   const [usuario, setUsuario] = useState(null);
@@ -36,7 +36,7 @@ function Despacho() {
       });
       setPedidos(res.data || []);
     } catch {
-      // Error silencioso
+      // silent
     } finally {
       setLoading(false);
     }
@@ -45,26 +45,19 @@ function Despacho() {
   useEffect(() => {
     if (!usuario) return;
     cargarPedidos();
-    const interval = setInterval(cargarPedidos, 8000);
+    const interval = setInterval(cargarPedidos, 15000);
     return () => clearInterval(interval);
   }, [usuario]);
 
-  useEffect(() => {
-    if (!usuario) return;
-    const socket = io(SOCKET_URL);
-    socket.emit('join', 'Despachador');
-
-    socket.on('pedido_listo', (pedido) => {
+  useSocket({
+    pedido_listo: (pedido) => {
       setPedidos(prev => [pedido, ...prev]);
       addToast(`Pedido #${pedido.numero_ticket} listo para entregar`, 'success');
-    });
-
-    socket.on('cambio_estado', ({ pedido_id, estado }) => {
+    },
+    cambio_estado: ({ pedido_id, estado }) => {
       setPedidos(prev => prev.map(p => p.id === pedido_id ? { ...p, estado } : p));
-    });
-
-    return () => socket.close();
-  }, [usuario]);
+    },
+  });
 
   const entregar = async (id) => {
     try {
@@ -161,17 +154,19 @@ function Despacho() {
       <main className="main-content dispatch-page">
         <div className="dispatch-header">
           <div>
-            <h2>🚀 Despacho</h2>
-            <p>Pedidos listos para entregar — <strong style={{color:'#2ecc71'}}>{listos.length}</strong> pendiente(s)</p>
+            <h2>Despacho</h2>
+            <p>Pedidos listos para entregar — <strong style={{color:'var(--green)'}}>{listos.length}</strong> pendiente(s)</p>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:'8px',background:'var(--surface)',border:'1px solid var(--border)',borderRadius:'20px',padding:'6px 14px'}}>
-            <span style={{width:'8px',height:'8px',borderRadius:'50%',background:'#2ecc71',boxShadow:'0 0 6px #2ecc71',display:'inline-block'}}/>
-            <span style={{fontSize:'12px',fontWeight:600,color:'var(--text-muted)'}}>En vivo</span>
+          <div className="kitchen-live">
+            <span className="kitchen-live-dot active" />
+            <span className="kitchen-live-text">En vivo</span>
           </div>
         </div>
 
         {loading ? (
-          <div className="loading-text" style={{paddingTop:'60px'}}>Cargando pedidos...</div>
+          <div className="loading-text" style={{paddingTop:'60px'}}>
+            <Loader2 size={20} className="spin" /> Cargando pedidos...
+          </div>
         ) : (
           <div className="dispatch-body">
             <div className="dispatch-main">
@@ -179,7 +174,7 @@ function Despacho() {
                 Listos para entregar ({listos.length})
               </h3>
               {listos.length === 0 ? (
-                <p className="dispatch-empty">✅ Sin pedidos pendientes de entrega</p>
+                <p className="dispatch-empty">Sin pedidos pendientes de entrega</p>
               ) : (
                 <div className="dispatch-grid">
                   {listos.map(p => (
@@ -194,18 +189,17 @@ function Despacho() {
                       </div>
                       {p.tipo && (
                         <div style={{fontSize:'11px',fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:'var(--text-muted)'}}>
-                          {p.tipo === 'en_mesa' ? `🍽️ Mesa ${p.mesa?.numero || ''}` : p.tipo === 'para_llevar' ? '🛍️ Para llevar' : p.tipo === 'domicilio' ? '🚴 Domicilio' : '🏃 Para recoger'}
+                          {p.tipo === 'en_mesa' ? `Mesa ${p.mesa?.numero || ''}` : p.tipo === 'para_llevar' ? 'Para llevar' : p.tipo === 'domicilio' ? 'Domicilio' : 'Para recoger'}
                         </div>
                       )}
 
-                      {/* Notas adicionales del pedido */}
                       {p.notas && (
                         <div style={{
                           background: 'var(--caramel-dim)', borderRadius: '6px', padding: '8px 10px',
                           marginTop: '8px', fontSize: '13px', border: '1px solid rgba(212,163,115,0.25)'
                         }}>
                           <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--caramel)', marginBottom: '2px' }}>
-                            📝 Notas del pedido
+                            Notas del pedido
                           </div>
                           {p.notas}
                         </div>
@@ -218,11 +212,11 @@ function Despacho() {
                             <span style={{flex:1}}>{item.nombre}</span>
                             {item.notas && (
                               <span style={{
-                                fontSize:'11px', color:'#f1c40f', background:'rgba(231,76,60,0.15)',
-                                padding:'2px 8px', borderRadius:'6px', border:'1px solid rgba(231,76,60,0.3)',
+                                fontSize:'11px', color:'var(--amber)', background:'var(--amber-bg)',
+                                padding:'2px 8px', borderRadius:'6px', border:'1px solid rgba(240,180,41,0.3)',
                                 whiteSpace:'nowrap'
                               }}>
-                                📝 {item.notas}
+                                {item.notas}
                               </span>
                             )}
                           </div>
@@ -233,7 +227,7 @@ function Despacho() {
                           <Receipt size={14} /> Ver Ticket
                         </button>
                         <button className="dispatch-btn" onClick={() => entregar(p.id)}>
-                          ✓ Marcar Entregado
+                          Marcar Entregado
                         </button>
                       </div>
                     </div>
@@ -260,7 +254,7 @@ function Despacho() {
                         <span className="dispatch-recent-time">
                           {new Date(p.actualizado_en || p.creado_en).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
                         </span>
-                        <div style={{fontSize:'10px',color:'#2ecc71',marginTop:'2px'}}>✓ Entregado</div>
+                        <div style={{fontSize:'10px',color:'var(--green)',marginTop:'2px'}}>Entregado</div>
                       </div>
                     </div>
                   ))}
@@ -272,7 +266,7 @@ function Despacho() {
       </main>
 
       {ticketModal && (
-        <div className="pos-modal-overlay" onClick={() => setTicketModal(null)}>
+        <div className="modal-overlay" onClick={() => setTicketModal(null)} role="dialog" aria-modal="true">
           <div className="pos-ticket-modal" onClick={e => e.stopPropagation()}>
             <div className="pos-ticket-header">
               <h2>Dulce Patojo</h2>

@@ -91,7 +91,7 @@ export default function ConfirmModal({
               <IconComp size={20} color={config.iconColor} />
             </div>
           )}
-          <h3 id="modal-title">{title || 'Confirmar'}</h3>
+          <h3 className="modal-title" id="modal-title">{title || 'Confirmar'}</h3>
           <button className="modal-close-btn" onClick={onCancel} aria-label="Cerrar">
             <X size={18} />
           </button>
@@ -102,20 +102,11 @@ export default function ConfirmModal({
           </p>
         </div>
         <div className="modal-footer">
-          <button
-            ref={cancelRef}
-            className="btn"
-            style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-            onClick={onCancel}
-          >
+          <button ref={cancelRef} className="btn btn-ghost" onClick={onCancel}>
             {cancelText || 'Cancelar'}
           </button>
           <button
-            className="btn"
-            style={{
-              background: config.confirmBg,
-              color: config.confirmColor,
-            }}
+            className={`btn ${resolvedType === 'danger' ? 'btn-danger' : 'btn-primary'}`}
             onClick={onConfirm}
           >
             {confirmText || 'Confirmar'}

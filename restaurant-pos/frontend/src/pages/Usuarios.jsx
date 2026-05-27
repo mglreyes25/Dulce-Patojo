@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { X } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
@@ -213,14 +214,16 @@ function Usuarios() {
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h2>Gestión de Usuarios</h2>
-            <p>
+            <h2 className="page-title">Gestión de Usuarios</h2>
+            <p className="page-subtitle">
               Administra los accesos al sistema · {usuarios.length} usuario(s) registrado(s)
             </p>
           </div>
-          <button className="btn btn-primary" onClick={abrirCrear}>
-            + Nuevo Usuario
-          </button>
+          <div className="page-header-actions">
+            <button className="btn btn-primary" onClick={abrirCrear}>
+              + Nuevo Usuario
+            </button>
+          </div>
         </div>
 
         {error && !showModal && <div className="message error-message">{error}</div>}
@@ -331,86 +334,77 @@ function Usuarios() {
 
       {/* ── Modal crear / editar ── */}
       {showModal && (
-        <div className="modal-overlay" onClick={cerrarModal}>
+        <div className="modal-overlay" onClick={cerrarModal} role="dialog" aria-modal="true">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editando ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
-            {error && <div className="message error-message">{error}</div>}
-
-            <div className="form-group">
-              <label>Nombre *</label>
-              <input
-                value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                placeholder="Nombre completo"
-              />
+            <div className="modal-header">
+              <h3 className="modal-title">{editando ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
+              <button className="modal-close-btn" onClick={cerrarModal} aria-label="Cerrar">
+                <X size={18} />
+              </button>
             </div>
+            <div className="modal-body">
+              {error && <div className="message error-message">{error}</div>}
 
-            <div className="form-group">
-              <label>Correo *</label>
-              <input
-                type="email"
-                value={form.correo}
-                onChange={(e) => setForm({ ...form, correo: e.target.value })}
-                placeholder="correo@ejemplo.com"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Contraseña {editando ? '(vacío = sin cambios)' : '*'}</label>
-              <PasswordInput
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value, confirmarPassword: '' })}
-                placeholder="Mín. 8 car., mayúscula, número, especial"
-              />
-              {!editando && (
-                <small className="pwd-hint">
-                  8+ caracteres · Mayúscula · Minúscula · Número · Especial (!@#$%…)
-                </small>
-              )}
-            </div>
-
-            {/* Confirmación: siempre al crear, al editar solo si hay nueva contraseña */}
-            {mostrarConfirmar && (
               <div className="form-group">
-                <label>Confirmar Contraseña *</label>
-                <PasswordInput
-                  value={form.confirmarPassword}
-                  onChange={(e) => setForm({ ...form, confirmarPassword: e.target.value })}
-                  placeholder="Repite la contraseña"
+                <label>Nombre *</label>
+                <input
+                  value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  placeholder="Nombre completo"
                 />
               </div>
-            )}
 
-            <div className="form-group">
-              <label>Rol *</label>
-              <select
-                value={form.rol}
-                onChange={(e) => setForm({ ...form, rol: e.target.value })}
-              >
-                <option>Admin</option>
-                <option>Cajero</option>
-                <option>Cocinero</option>
-                <option>Despachador</option>
-              </select>
+              <div className="form-group">
+                <label>Correo *</label>
+                <input
+                  type="email"
+                  value={form.correo}
+                  onChange={(e) => setForm({ ...form, correo: e.target.value })}
+                  placeholder="correo@ejemplo.com"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Contraseña {editando ? '(vacío = sin cambios)' : '*'}</label>
+                <PasswordInput
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value, confirmarPassword: '' })}
+                  placeholder="Mín. 8 car., mayúscula, número, especial"
+                />
+                {!editando && (
+                  <small className="pwd-hint">
+                    8+ caracteres · Mayúscula · Minúscula · Número · Especial (!@#$%…)
+                  </small>
+                )}
+              </div>
+
+              {mostrarConfirmar && (
+                <div className="form-group">
+                  <label>Confirmar Contraseña *</label>
+                  <PasswordInput
+                    value={form.confirmarPassword}
+                    onChange={(e) => setForm({ ...form, confirmarPassword: e.target.value })}
+                    placeholder="Repite la contraseña"
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Rol *</label>
+                <select
+                  value={form.rol}
+                  onChange={(e) => setForm({ ...form, rol: e.target.value })}
+                >
+                  <option>Admin</option>
+                  <option>Cajero</option>
+                  <option>Cocinero</option>
+                  <option>Despachador</option>
+                </select>
+              </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: 'var(--surface)',
-                  color: 'var(--text-muted)', border: '1px solid var(--border)',
-                }}
-                onClick={cerrarModal}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={handleGuardar}
-                disabled={guardando}
-              >
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={cerrarModal}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleGuardar} disabled={guardando}>
                 {guardando ? 'Guardando…' : 'Guardar'}
               </button>
             </div>
@@ -420,39 +414,27 @@ function Usuarios() {
 
       {/* ── Modal eliminar ── */}
       {showEliminarModal && (
-        <div className="modal-overlay" onClick={() => setShowEliminarModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ color: '#e74c3c' }}>🗑️ Eliminar Usuario</h3>
-            {error && <div className="message error-message">{error}</div>}
-
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              ¿Estás seguro de eliminar permanentemente a <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
-            </p>
-            <p style={{ fontSize: '13px', color: '#e74c3c', background: 'var(--red-bg)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>
-              ⚠️ Esta acción no se puede deshacer. Si el usuario tiene registros asociados (pedidos, pagos), no se podrá eliminar.
-            </p>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: 'var(--surface)',
-                  color: 'var(--text-muted)', border: '1px solid var(--border)',
-                }}
-                onClick={() => setShowEliminarModal(false)}
-              >
-                Cancelar
+        <div className="modal-overlay" onClick={() => setShowEliminarModal(false)} role="dialog" aria-modal="true">
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Eliminar Usuario</h3>
+              <button className="modal-close-btn" onClick={() => setShowEliminarModal(false)} aria-label="Cerrar">
+                <X size={18} />
               </button>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: '#c0392b',
-                  color: '#fff', border: '1px solid #e74c3c',
-                }}
-                onClick={handleEliminar}
-                disabled={eliminando}
-              >
-                {eliminando ? 'Eliminando…' : '🗑️ Eliminar Permanentemente'}
+            </div>
+            <div className="modal-body">
+              {error && <div className="message error-message">{error}</div>}
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                ¿Estás seguro de eliminar permanentemente a <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--red)', background: 'var(--red-bg)', padding: '10px 14px', borderRadius: '8px', marginTop: '12px' }}>
+                Esta acción no se puede deshacer. Si el usuario tiene registros asociados (pedidos, pagos), no se podrá eliminar.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowEliminarModal(false)}>Cancelar</button>
+              <button className="btn btn-danger" onClick={handleEliminar} disabled={eliminando}>
+                {eliminando ? 'Eliminando…' : 'Eliminar Permanentemente'}
               </button>
             </div>
           </div>
@@ -461,52 +443,33 @@ function Usuarios() {
 
       {/* ── Modal inactivar ── */}
       {showInactivarModal && (
-        <div className="modal-overlay" onClick={() => setShowInactivarModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>🔒 Inactivar Usuario</h3>
-            {error && <div className="message error-message">{error}</div>}
-
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-              ¿Estás seguro de inactivar a <strong style={{ color: 'var(--text)' }}>{inactivarTarget?.nombre}</strong>?
-            </p>
-
-            <div className="form-group">
-              <label>Motivo / Explicación *</label>
-              <textarea
-                value={motivoInactivar}
-                onChange={(e) => setMotivoInactivar(e.target.value)}
-                placeholder="Escribe el motivo por el que se inactiva este usuario..."
-                rows={3}
-                style={{
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: '8px', padding: '12px 16px', fontSize: '15px',
-                  color: 'var(--text)', fontFamily: 'DM Sans, sans-serif',
-                  resize: 'vertical', width: '100%',
-                }}
-              />
+        <div className="modal-overlay" onClick={() => setShowInactivarModal(false)} role="dialog" aria-modal="true">
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Inactivar Usuario</h3>
+              <button className="modal-close-btn" onClick={() => setShowInactivarModal(false)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
             </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: 'var(--surface)',
-                  color: 'var(--text-muted)', border: '1px solid var(--border)',
-                }}
-                onClick={() => setShowInactivarModal(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn"
-                style={{
-                  flex: 1, background: 'var(--red-bg)',
-                  color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)',
-                }}
-                onClick={confirmarInactivar}
-              >
-                🔒 Inactivar
-              </button>
+            <div className="modal-body">
+              {error && <div className="message error-message">{error}</div>}
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                ¿Estás seguro de inactivar a <strong style={{ color: 'var(--text)' }}>{inactivarTarget?.nombre}</strong>?
+              </p>
+              <div className="form-group">
+                <label>Motivo / Explicación *</label>
+                <textarea
+                  className="form-input"
+                  value={motivoInactivar}
+                  onChange={(e) => setMotivoInactivar(e.target.value)}
+                  placeholder="Escribe el motivo por el que se inactiva este usuario..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowInactivarModal(false)}>Cancelar</button>
+              <button className="btn btn-warning" onClick={confirmarInactivar}>Inactivar</button>
             </div>
           </div>
         </div>

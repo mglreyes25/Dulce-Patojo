@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { X, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
@@ -132,12 +133,16 @@ function Ingredientes() {
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h2>🥗 Ingredientes</h2>
-            <p>{ingredientes.length} registro(s) — {bajosStock.length} con stock bajo</p>
+            <h2 className="page-title">Ingredientes</h2>
+            <p className="page-subtitle">
+              {ingredientes.length} ingrediente(s) registrado(s) — Stock general
+            </p>
           </div>
-          <button className="btn btn-primary" onClick={() => { setEditando(null); resetForm(); setShowModal(true); }}>
-            + Nuevo Ingrediente
-          </button>
+          <div className="page-header-actions">
+            <button className="btn btn-primary" onClick={() => { setEditando(null); resetForm(); setShowModal(true); }}>
+              <Plus size={16} /> Nuevo Ingrediente
+            </button>
+          </div>
         </div>
 
         {bajosStock.length > 0 && (
@@ -208,51 +213,55 @@ function Ingredientes() {
 
         {/* Modal crear/editar */}
         {showModal && (
-          <div className="modal-overlay" onClick={() => { setShowModal(false); setEditando(null); }}>
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => { setShowModal(false); setEditando(null); }}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3>{editando ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}</h3>
-              <div className="form-group">
-                <label>Nombre</label>
-                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Harina de trigo" />
+              <div className="modal-header">
+                <h3>{editando ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}</h3>
+                <button className="modal-close" onClick={() => { setShowModal(false); setEditando(null); }}><X size={18} /></button>
               </div>
-              <div className="form-group">
-                <label>Unidad de medida</label>
-                <select value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })}>
-                  <option value="unidad">Unidad</option>
-                  <option value="kg">Kilogramo (kg)</option>
-                  <option value="g">Gramo (g)</option>
-                  <option value="l">Litro (l)</option>
-                  <option value="ml">Mililitro (ml)</option>
-                  <option value="pieza">Pieza</option>
-                  <option value="lb">Libra (lb)</option>
-                  <option value="oz">Onza (oz)</option>
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="modal-body">
                 <div className="form-group">
-                  <label>Stock actual</label>
-                  <input type="number" step="0.001" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
+                  <label>Nombre</label>
+                  <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} placeholder="Ej: Harina de trigo" />
                 </div>
                 <div className="form-group">
-                  <label>Stock mínimo</label>
-                  <input type="number" step="0.001" value={form.stock_minimo} onChange={e => setForm({ ...form, stock_minimo: e.target.value })} />
+                  <label>Unidad de medida</label>
+                  <select value={form.unidad} onChange={e => setForm({ ...form, unidad: e.target.value })}>
+                    <option value="unidad">Unidad</option>
+                    <option value="kg">Kilogramo (kg)</option>
+                    <option value="g">Gramo (g)</option>
+                    <option value="l">Litro (l)</option>
+                    <option value="ml">Mililitro (ml)</option>
+                    <option value="pieza">Pieza</option>
+                    <option value="lb">Libra (lb)</option>
+                    <option value="oz">Onza (oz)</option>
+                  </select>
+                </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Stock actual</label>
+                    <input type="number" step="0.001" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Stock mínimo</label>
+                    <input type="number" step="0.001" value={form.stock_minimo} onChange={e => setForm({ ...form, stock_minimo: e.target.value })} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Precio de compra ($)</label>
+                  <input type="number" step="0.01" value={form.precio_compra} onChange={e => setForm({ ...form, precio_compra: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Proveedor</label>
+                  <select value={form.proveedor_id} onChange={e => setForm({ ...form, proveedor_id: e.target.value })}>
+                    <option value="">Sin proveedor</option>
+                    {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label>Precio de compra ($)</label>
-                <input type="number" step="0.01" value={form.precio_compra} onChange={e => setForm({ ...form, precio_compra: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Proveedor</label>
-                <select value={form.proveedor_id} onChange={e => setForm({ ...form, proveedor_id: e.target.value })}>
-                  <option value="">Sin proveedor</option>
-                  {proveedores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                <button className="btn" style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                  onClick={() => { setShowModal(false); setEditando(null); }}>Cancelar</button>
-                <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleGuardar} disabled={guardando}>
+              <div className="modal-footer">
+                <button className="btn" onClick={() => { setShowModal(false); setEditando(null); }}>Cancelar</button>
+                <button className="btn btn-primary" onClick={handleGuardar} disabled={guardando}>
                   {guardando ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
                 </button>
               </div>
@@ -262,18 +271,22 @@ function Ingredientes() {
 
         {/* Modal ajuste stock */}
         {ajusteModal && (
-          <div className="modal-overlay" onClick={() => setAjusteModal(null)}>
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setAjusteModal(null)}>
             <div className="modal" onClick={e => e.stopPropagation()}>
-              <h3>📦 Ajustar Stock: {ajusteModal.nombre}</h3>
-              <div className="form-group">
-                <label>Nuevo stock</label>
-                <input type="number" step="0.001" value={ajusteModal.stock}
-                  onChange={e => setAjusteModal({ ...ajusteModal, stock: e.target.value })} />
+              <div className="modal-header">
+                <h3>Ajustar Stock: {ajusteModal.nombre}</h3>
+                <button className="modal-close" onClick={() => setAjusteModal(null)}><X size={18} /></button>
               </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                <button className="btn" style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                  onClick={() => setAjusteModal(null)}>Cancelar</button>
-                <button className="btn btn-primary" style={{ flex: 1 }}
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Nuevo stock</label>
+                  <input type="number" step="0.001" value={ajusteModal.stock}
+                    onChange={e => setAjusteModal({ ...ajusteModal, stock: e.target.value })} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn" onClick={() => setAjusteModal(null)}>Cancelar</button>
+                <button className="btn btn-primary"
                   onClick={async () => {
                     try {
                       await axios.patch(`${API}/ingredientes/${ajusteModal.id}/stock`,
@@ -290,39 +303,45 @@ function Ingredientes() {
 
         {/* Modal movimientos */}
         {showMovimientos && (
-          <div className="modal-overlay" onClick={() => setShowMovimientos(null)}>
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setShowMovimientos(null)}>
             <div className="modal modal-wide" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-              <h3>📋 Movimientos</h3>
-              {movimientos.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Sin movimientos</p>
-              ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Cantidad</th>
-                      <th>Stock Ant.</th>
-                      <th>Stock Nuevo</th>
-                      <th>Descripción</th>
-                      <th>Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {movimientos.map(m => (
-                      <tr key={m.id}>
-                        <td><span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>{m.tipo}</span></td>
-                        <td style={{ fontWeight: 600 }}>{m.cantidad}</td>
-                        <td>{m.stock_anterior}</td>
-                        <td>{m.stock_nuevo}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(m.creado_en).toLocaleString('es-GT')}</td>
+              <div className="modal-header">
+                <h3>Movimientos</h3>
+                <button className="modal-close" onClick={() => setShowMovimientos(null)}><X size={18} /></button>
+              </div>
+              <div className="modal-body">
+                {movimientos.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Sin movimientos</p>
+                ) : (
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Tipo</th>
+                        <th>Cantidad</th>
+                        <th>Stock Ant.</th>
+                        <th>Stock Nuevo</th>
+                        <th>Descripción</th>
+                        <th>Fecha</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-              <button className="btn" style={{ width: '100%', marginTop: 16, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                onClick={() => setShowMovimientos(null)}>Cerrar</button>
+                    </thead>
+                    <tbody>
+                      {movimientos.map(m => (
+                        <tr key={m.id}>
+                          <td><span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>{m.tipo}</span></td>
+                          <td style={{ fontWeight: 600 }}>{m.cantidad}</td>
+                          <td>{m.stock_anterior}</td>
+                          <td>{m.stock_nuevo}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(m.creado_en).toLocaleString('es-GT')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn" onClick={() => setShowMovimientos(null)}>Cerrar</button>
+              </div>
             </div>
           </div>
         )}

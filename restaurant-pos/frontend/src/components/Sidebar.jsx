@@ -3,23 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   BarChart3, Users, CakeSlice, Package, Salad, ClipboardList,
   PartyPopper, Coffee, Map, ChefHat, Rocket, TrendingUp, LogOut,
-  Menu, X,
+  Menu, X, Settings,
 } from 'lucide-react';
+import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../utils/api';
 
 const rolColor = (rol) =>
-  ({ Admin: 'warning', Cajero: 'primary', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
+  ({ Admin: 'primary', Cajero: 'info', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
 
-const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogout, onLinkClick }) => (
+const rolInitials = (nombre) => {
+  if (!nombre) return '?';
+  return nombre.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+};
+
+const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogout, onLinkClick, socketConnected }) => (
   <>
     <div className="sidebar-logo">
-      {!collapsed && (
-        <a href="/dashboard" className="sidebar-logo-link">
-          <div className="sidebar-logo-container">
-            <img src="/images/logo.jpg" alt="Dulce Patojo" className="sidebar-logo-img" />
-            <span className="sidebar-logo-text">Dulce patojo</span>
-          </div>
-        </a>
-      )}
+      <img src="/images/logo.jpg" alt="Dulce Patojo" className="sidebar-logo-img" />
+      {!collapsed && <span className="sidebar-logo-text">Dulce Patojo</span>}
     </div>
 
     <nav>
@@ -51,10 +52,22 @@ const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogou
     </nav>
 
     <div className="sidebar-footer">
-      {!collapsed && (
+      {!collapsed ? (
         <div className="sidebar-user">
-          <span className="sidebar-user-name">{usuario?.nombre}</span>
-          <span className={`badge badge-${rolColor(usuario?.rol)}`}>{usuario?.rol}</span>
+          <div className="sidebar-user-avatar">
+            {rolInitials(usuario?.nombre)}
+          </div>
+          <div className="sidebar-user-info">
+            <span className="sidebar-user-name">{usuario?.nombre}</span>
+            <span className={`badge badge-${rolColor(usuario?.rol)}`}>{usuario?.rol}</span>
+          </div>
+          <span className={`socket-indicator ${socketConnected ? 'connected' : 'disconnected'}`}
+                title={socketConnected ? 'En línea' : 'Sin conexión'} />
+        </div>
+      ) : (
+        <div className="sidebar-user" style={{ justifyContent: 'center' }}>
+          <span className={`socket-indicator ${socketConnected ? 'connected' : 'disconnected'}`}
+                title={socketConnected ? 'En línea' : 'Sin conexión'} />
         </div>
       )}
       <button
@@ -62,8 +75,8 @@ const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogou
         onClick={handleLogout}
         title={collapsed ? 'Cerrar Sesión' : undefined}
       >
-        <LogOut size={16} className="btn-logout-icon" />
-        {!collapsed && ' Cerrar Sesión'}
+        <LogOut size={16} />
+        {!collapsed && 'Cerrar Sesión'}
       </button>
     </div>
   </>
@@ -73,6 +86,14 @@ export default function Sidebar({ usuario, activeRoute }) {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [socketConnected, setSocketConnected] = useState(false);
+
+  useEffect(() => {
+    const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
+    s.on('connect', () => setSocketConnected(true));
+    s.on('disconnect', () => setSocketConnected(false));
+    return () => s.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -120,6 +141,7 @@ export default function Sidebar({ usuario, activeRoute }) {
     ...(usuario?.rol === 'Admin'
       ? [{ to: '/reportes', icon: TrendingUp, label: 'Reportes', key: 'reportes' }]
       : []),
+    { to: '/configuracion', icon: Settings, label: 'Configuración', key: 'configuracion' },
   ];
 
   return (
@@ -135,7 +157,7 @@ export default function Sidebar({ usuario, activeRoute }) {
       {drawerOpen && (
         <div className="sidebar-overlay" onClick={() => setDrawerOpen(false)}>
           <aside className="sidebar sidebar-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="sidebar-drawer-header">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 8px 0' }}>
               <button
                 className="hamburger-btn"
                 onClick={() => setDrawerOpen(false)}
@@ -148,12 +170,13 @@ export default function Sidebar({ usuario, activeRoute }) {
               usuario={usuario} activeRoute={activeRoute}
               collapsed={false} navItems={navItems}
               handleLogout={handleLogout} onLinkClick={() => setDrawerOpen(false)}
+              socketConnected={socketConnected}
             />
           </aside>
         </div>
       )}
 
-      <aside className={`sidebar sidebar-desktop${collapsed ? ' sidebar-collapsed' : ''}`}>
+      <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
         <button
           className="hamburger-btn hamburger-desktop"
           onClick={() => setCollapsed((c) => !c)}
@@ -165,6 +188,7 @@ export default function Sidebar({ usuario, activeRoute }) {
           usuario={usuario} activeRoute={activeRoute}
           collapsed={collapsed} navItems={navItems}
           handleLogout={handleLogout} onLinkClick={undefined}
+          socketConnected={socketConnected}
         />
       </aside>
     </>

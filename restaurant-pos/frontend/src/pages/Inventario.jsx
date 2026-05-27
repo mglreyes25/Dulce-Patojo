@@ -5,6 +5,7 @@ import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
 import API from '../utils/api';
+import { X, Plus, Loader2 } from 'lucide-react';
 
 export default function Inventario() {
   const [inventario, setInventario]     = useState([]);
@@ -147,10 +148,12 @@ export default function Inventario() {
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h2>📦 Inventario</h2>
-            <p>{totalProductos} producto(s) · {conStock} con stock · {bajoStock} bajo stock · {sinStock} sin stock</p>
+            <h2 className="page-title">Inventario</h2>
+            <p className="page-subtitle">
+              Control de existencias de productos
+            </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="page-header-actions">
             <button className="btn" style={{ background: 'var(--green-bg)', color: '#2ecc71', border: '1px solid rgba(39,174,96,0.3)' }} onClick={() => abrirModal('entrada')}>
               + Entrada
             </button>
@@ -206,7 +209,7 @@ export default function Inventario() {
         {/* Tabla */}
         <div className="card">
           {loading ? (
-            <p className="loading-text">Cargando inventario...</p>
+            <p className="loading-text"><Loader2 size={20} className="spin" style={{ verticalAlign: 'middle', marginRight: 8 }} /> Cargando inventario...</p>
           ) : inventarioFiltrado.length === 0 ? (
             <div className="empty-state">
               <p>{inventario.length === 0 ? 'No hay productos registrados' : 'Sin resultados'}</p>
@@ -301,51 +304,53 @@ export default function Inventario() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>{modalTipo === 'entrada' ? '📦 Registrar Entrada' : '📦 Registrar Salida'}</h3>
+            <div className="modal-header">
+              <h3 className="modal-title">{modalTipo === 'entrada' ? '📦 Registrar Entrada' : '📦 Registrar Salida'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
+            </div>
             {error && <div className="message error-message">{error}</div>}
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Producto *</label>
+                <select value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value })}>
+                  <option value="">Seleccionar producto...</option>
+                  {inventario.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} — Stock actual: {p.stock}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <div className="form-group">
-              <label>Producto *</label>
-              <select value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value })}>
-                <option value="">Seleccionar producto...</option>
-                {inventario.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombre} — Stock actual: {p.stock}
-                  </option>
-                ))}
-              </select>
+              <div className="form-group">
+                <label>Cantidad *</label>
+                <input
+                  type="number" min="1" step="1"
+                  value={form.cantidad}
+                  onChange={e => setForm({ ...form, cantidad: e.target.value })}
+                  placeholder="Ej: 10"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Descripción (opcional)</label>
+                <input
+                  value={form.descripcion}
+                  onChange={e => setForm({ ...form, descripcion: e.target.value })}
+                  placeholder="Motivo o referencia..."
+                />
+              </div>
             </div>
-
-            <div className="form-group">
-              <label>Cantidad *</label>
-              <input
-                type="number" min="1" step="1"
-                value={form.cantidad}
-                onChange={e => setForm({ ...form, cantidad: e.target.value })}
-                placeholder="Ej: 10"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Descripción (opcional)</label>
-              <input
-                value={form.descripcion}
-                onChange={e => setForm({ ...form, descripcion: e.target.value })}
-                placeholder="Motivo o referencia..."
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <div className="modal-footer">
               <button
                 className="btn"
-                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                 onClick={() => setShowModal(false)}
               >
                 Cancelar
               </button>
               <button
                 className="btn btn-primary"
-                style={{ flex: 1 }}
                 onClick={handleGuardar}
                 disabled={guardando}
               >
@@ -359,53 +364,60 @@ export default function Inventario() {
       {/* Modal movimientos */}
       {showMovimientos && (
         <div className="modal-overlay" onClick={() => setShowMovimientos(null)}>
-          <div className="modal modal-wide" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3>📋 Movimientos</h3>
-            {movimientos.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
-                Sin movimientos registrados
-              </p>
-            ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Cantidad</th>
-                    <th>Stock Anterior</th>
-                    <th>Stock Nuevo</th>
-                    <th>Descripción</th>
-                    <th>Usuario</th>
-                    <th>Fecha</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movimientos.map(m => (
-                    <tr key={m.id}>
-                      <td>
-                        <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>
-                          {m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}</td>
-                      <td>{m.stock_anterior}</td>
-                      <td style={{ fontWeight: 600 }}>{m.stock_nuevo}</td>
-                      <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
-                      <td style={{ fontSize: '12px' }}>{m.usuarios?.nombre || '—'}</td>
-                      <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {new Date(m.creado_en).toLocaleString('es-GT')}
-                      </td>
+          <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">📋 Movimientos</h3>
+              <button className="modal-close" onClick={() => setShowMovimientos(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {movimientos.length === 0 ? (
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
+                  Sin movimientos registrados
+                </p>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Cantidad</th>
+                      <th>Stock Anterior</th>
+                      <th>Stock Nuevo</th>
+                      <th>Descripción</th>
+                      <th>Usuario</th>
+                      <th>Fecha</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <button
-              className="btn"
-              style={{ width: '100%', marginTop: '16px', background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-              onClick={() => setShowMovimientos(null)}
-            >
-              Cerrar
-            </button>
+                  </thead>
+                  <tbody>
+                    {movimientos.map(m => (
+                      <tr key={m.id}>
+                        <td>
+                          <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>
+                            {m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}</td>
+                        <td>{m.stock_anterior}</td>
+                        <td style={{ fontWeight: 600 }}>{m.stock_nuevo}</td>
+                        <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
+                        <td style={{ fontSize: '12px' }}>{m.usuarios?.nombre || '—'}</td>
+                        <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          {new Date(m.creado_en).toLocaleString('es-GT')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn"
+                style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                onClick={() => setShowMovimientos(null)}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -414,35 +426,39 @@ export default function Inventario() {
       {ajusteModal && (
         <div className="modal-overlay" onClick={() => { setAjusteModal(null); setAjusteDesc(''); }}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>✏️ Ajustar Stock</h3>
-            <div className="form-group">
-              <label>Nuevo stock</label>
-              <input
-                type="number" min="0"
-                value={ajusteModal.stockNuevo}
-                onChange={e => setAjusteModal({ ...ajusteModal, stockNuevo: e.target.value })}
-              />
+            <div className="modal-header">
+              <h3 className="modal-title">✏️ Ajustar Stock</h3>
+              <button className="modal-close" onClick={() => { setAjusteModal(null); setAjusteDesc(''); }}><X size={20} /></button>
             </div>
-            <div className="form-group">
-              <label>Motivo del ajuste</label>
-              <input
-                type="text"
-                value={ajusteDesc}
-                onChange={e => setAjusteDesc(e.target.value)}
-                placeholder="Ej: Inventario físico, merma, etc."
-              />
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Nuevo stock</label>
+                <input
+                  type="number" min="0"
+                  value={ajusteModal.stockNuevo}
+                  onChange={e => setAjusteModal({ ...ajusteModal, stockNuevo: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label>Motivo del ajuste</label>
+                <input
+                  type="text"
+                  value={ajusteDesc}
+                  onChange={e => setAjusteDesc(e.target.value)}
+                  placeholder="Ej: Inventario físico, merma, etc."
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+            <div className="modal-footer">
               <button
                 className="btn"
-                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                 onClick={() => { setAjusteModal(null); setAjusteDesc(''); }}
               >
                 Cancelar
               </button>
               <button
                 className="btn btn-primary"
-                style={{ flex: 1 }}
                 onClick={confirmarAjuste}
               >
                 Confirmar Ajuste

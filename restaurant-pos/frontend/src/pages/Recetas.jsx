@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import { useToast } from '../context/ToastContext';
+import { X, Plus } from 'lucide-react';
 import API from '../utils/api';
 
 function Recetas() {
@@ -107,8 +108,10 @@ function Recetas() {
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h2>📋 Recetas</h2>
-            <p>{productosConReceta.size} producto(s) con receta definida</p>
+            <h2 className="page-title">Recetas</h2>
+            <p className="page-subtitle">
+              Asigna ingredientes a cada producto
+            </p>
           </div>
         </div>
 
@@ -158,26 +161,18 @@ function Recetas() {
                         display: 'flex', gap: 8, alignItems: 'center',
                         padding: '8px 0', borderBottom: '1px solid var(--border)',
                       }}>
-                        <select value={item.ingrediente_id}
+                        <select className="form-select" value={item.ingrediente_id}
                           onChange={e => updateItem(idx, 'ingrediente_id', Number(e.target.value))}
-                          style={{
-                            flex: 1, background: 'var(--surface)', color: 'var(--text)',
-                            border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px',
-                            fontSize: 12, fontFamily: "'DM Sans', sans-serif",
-                          }}>
+                          style={{ flex: 1, fontSize: 12 }}>
                           {ingredientes.map(i => (
                             <option key={i.id} value={i.id} disabled={editItems.some((e, ei) => ei !== idx && e.ingrediente_id === i.id)}>
                               {i.nombre} ({i.unidad})
                             </option>
                           ))}
                         </select>
-                        <input type="number" step="0.001" min="0" value={item.cantidad}
+                        <input className="form-input" type="number" step="0.001" min="0" value={item.cantidad}
                           onChange={e => updateItem(idx, 'cantidad', e.target.value)}
-                          style={{
-                            width: 80, background: 'var(--surface)', color: 'var(--text)',
-                            border: '1px solid var(--border)', borderRadius: 6, padding: '8px 10px',
-                            fontSize: 12, textAlign: 'center', fontFamily: "'DM Sans', sans-serif",
-                          }} />
+                          style={{ width: 80, fontSize: 12, textAlign: 'center' }} />
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 40 }}>{ing?.unidad || ''}</span>
                         <button className="btn-small btn-delete" onClick={() => removeItem(idx)} style={{ padding: '4px 8px', fontSize: 11 }}>✕</button>
                       </div>

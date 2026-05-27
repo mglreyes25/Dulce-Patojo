@@ -202,14 +202,14 @@ export default function Reportes() {
       <div className="main-content">
         <div className="page-header">
           <div>
-            <h2>Reportes</h2>
-            <p>Análisis de ventas, productos e inventario</p>
+            <h2 className="page-title">Reportes</h2>
+            <p className="page-subtitle">Análisis de ventas, productos e inventario</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn" style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }} onClick={() => { cargarVentas(); cargarProductos(); cargarMovimientos(); cargarCaja(); }}>
+          <div className="page-header-actions">
+            <button className="btn btn-secondary" onClick={() => { cargarVentas(); cargarProductos(); cargarMovimientos(); cargarCaja(); }}>
               <RefreshCw size={16} /> Actualizar
             </button>
-            <button className="btn" style={{ background: 'var(--gold-dim)', color: 'var(--gold-light)', border: '1px solid rgba(201,168,76,0.3)' }} onClick={exportCSV}>
+            <button className="btn btn-primary" onClick={exportCSV}>
               <Download size={16} /> Exportar
             </button>
           </div>

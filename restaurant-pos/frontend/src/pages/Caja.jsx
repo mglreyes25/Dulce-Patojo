@@ -476,6 +476,11 @@ export default function Caja() {
         className={`pos-product-card${sinStock ? ' pos-product-card--disabled' : ''}`}
         onClick={() => agregarAlCarrito(item, tipo)}
       >
+        {item.imagen_url ? (
+          <img src={item.imagen_url} alt={item.nombre} className="pos-product-img" />
+        ) : (
+          <div className="pos-product-img-placeholder" />
+        )}
         <div className="pos-product-header">
           <span className="pos-product-name">{item.nombre}</span>
           {item.stock !== undefined && Number(item.stock) <= Number(item.stock_minimo) && (
@@ -660,6 +665,11 @@ export default function Caja() {
               )}
               {carrito.map((item, idx) => (
                 <div key={idx} className="pos-cart-item">
+                  {item.imagen_url ? (
+                    <img src={item.imagen_url} alt={item.nombre} className="pos-cart-item-img" />
+                  ) : (
+                    <div className="pos-cart-item-img-placeholder" />
+                  )}
                   <div className="pos-cart-item-info">
                     <span className="pos-cart-item-name">{item.nombre}</span>
                     <span className="pos-cart-item-price">
@@ -678,7 +688,7 @@ export default function Caja() {
               ))}
             </div>
             <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido — ${total.toFixed(2)}
+              Procesar Pedido &mdash; ${total.toFixed(2)}
             </button>
           </aside>
         </div>
@@ -709,6 +719,11 @@ export default function Caja() {
               )}
               {carrito.map((item, idx) => (
                 <div key={idx} className="pos-cart-item">
+                  {item.imagen_url ? (
+                    <img src={item.imagen_url} alt={item.nombre} className="pos-cart-item-img" />
+                  ) : (
+                    <div className="pos-cart-item-img-placeholder" />
+                  )}
                   <div className="pos-cart-item-info">
                     <span className="pos-cart-item-name">{item.nombre}</span>
                     <span className="pos-cart-item-price">
@@ -727,7 +742,7 @@ export default function Caja() {
               ))}
             </div>
             <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido — ${total.toFixed(2)}
+              Procesar Pedido &mdash; ${total.toFixed(2)}
             </button>
           </div>
         </div>

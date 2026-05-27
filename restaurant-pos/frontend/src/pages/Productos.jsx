@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { X } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
@@ -394,34 +395,30 @@ export default function Productos() {
       <main className="main-content">
         <div className="page-header">
           <div>
-            <h2>{tab === 'productos' ? '🍔 Productos' : '🎁 Combos y Promociones'}</h2>
-            <p>
+            <h2 className="page-title">{tab === 'productos' ? 'Productos' : 'Combos y Promociones'}</h2>
+            <p className="page-subtitle">
               {tab === 'productos'
                 ? `${productos.length} producto(s) registrado(s)`
                 : `${combos.length} combo(s) registrado(s)`}
             </p>
           </div>
-          {usuario.rol === 'Admin' && (
-            <div style={{ display: 'flex', gap: '12px' }}>
-              {tab === 'productos' && (
-                <button
-                  className="btn"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-                  onClick={abrirPreciosMasivos}
-                >
-                  💲 Gestión de Precios
-                </button>
-              )}
+          <div className="page-header-actions">
+            {usuario.rol === 'Admin' && tab === 'productos' && (
+              <button className="btn btn-secondary" onClick={abrirPreciosMasivos}>
+                Gestión de Precios
+              </button>
+            )}
+            {usuario.rol === 'Admin' && (
               <button className="btn btn-primary" onClick={tab === 'productos' ? abrirCrear : abrirCrearCombo}>
                 + {tab === 'productos' ? 'Nuevo Producto' : 'Nuevo Combo'}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="tabs-bar">
-          <button className={`tab-btn ${tab === 'productos' ? 'active' : ''}`} onClick={() => setTab('productos')}>🍔 Productos</button>
-          <button className={`tab-btn ${tab === 'combos'   ? 'active' : ''}`} onClick={() => setTab('combos')}>🎁 Combos</button>
+          <button className={`tab-btn ${tab === 'productos' ? 'active' : ''}`} onClick={() => setTab('productos')}>Productos</button>
+          <button className={`tab-btn ${tab === 'combos'   ? 'active' : ''}`} onClick={() => setTab('combos')}>Combos</button>
         </div>
 
         {error && !showModal && !showComboModal && (
@@ -434,7 +431,7 @@ export default function Productos() {
             <div className="filtros-bar">
               <input
                 className="filtro-input"
-                placeholder="🔍 Buscar producto..."
+                placeholder="Buscar producto..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
               />
@@ -649,67 +646,60 @@ export default function Productos() {
 
       {/* ════════════ MODAL PRODUCTO ════════════ */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div
-            className="modal"
-            onClick={e => e.stopPropagation()}
-            style={{ maxHeight: '90vh', overflowY: 'auto' }}
-          >
-            <h3>{editando ? 'Editar Producto' : 'Nuevo Producto'}</h3>
-            {error && <div className="message error-message">{error}</div>}
-
-            <ImagenPicker
-              valor={imagenPreview}
-              onChange={(file, preview) => { setImagenFile(file); setImagenPreview(preview); }}
-            />
-
-            <div className="form-group">
-              <label>Nombre *</label>
-              <input
-                value={form.nombre}
-                onChange={e => setForm({ ...form, nombre: e.target.value })}
-                placeholder="Nombre del producto"
-              />
+        <div className="modal-overlay" onClick={() => setShowModal(false)} role="dialog" aria-modal="true">
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{editando ? 'Editar Producto' : 'Nuevo Producto'}</h3>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
             </div>
-            <div className="form-group">
-              <label>Descripción</label>
-              <input
-                value={form.descripcion}
-                onChange={e => setForm({ ...form, descripcion: e.target.value })}
-                placeholder="Descripción opcional"
+            <div className="modal-body">
+              {error && <div className="message error-message">{error}</div>}
+
+              <ImagenPicker
+                valor={imagenPreview}
+                onChange={(file, preview) => { setImagenFile(file); setImagenPreview(preview); }}
               />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
               <div className="form-group">
-                <label>Precio ($) *</label>
+                <label>Nombre *</label>
                 <input
-                  type="number" step="0.01" min="0.01"
-                  value={form.precio}
-                  onChange={e => setForm({ ...form, precio: e.target.value })}
-                  placeholder="0.00"
+                  value={form.nombre}
+                  onChange={e => setForm({ ...form, nombre: e.target.value })}
+                  placeholder="Nombre del producto"
                 />
               </div>
               <div className="form-group">
-                <label>Categoría *</label>
-                <select value={form.categoria_id} onChange={e => setForm({ ...form, categoria_id: e.target.value })}>
-                  <option value="">Seleccionar...</option>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
+                <label>Descripción</label>
+                <input
+                  value={form.descripcion}
+                  onChange={e => setForm({ ...form, descripcion: e.target.value })}
+                  placeholder="Descripción opcional"
+                />
+              </div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Precio ($) *</label>
+                  <input
+                    type="number" step="0.01" min="0.01"
+                    value={form.precio}
+                    onChange={e => setForm({ ...form, precio: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Categoría *</label>
+                  <select value={form.categoria_id} onChange={e => setForm({ ...form, categoria_id: e.target.value })}>
+                    <option value="">Seleccionar...</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-              <button
-                className="btn"
-                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                onClick={() => setShowModal(false)}
-              >Cancelar</button>
-              <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-                onClick={guardarProducto}
-                disabled={guardando}
-              >
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={guardarProducto} disabled={guardando}>
                 {guardando ? 'Guardando...' : 'Guardar'}
               </button>
             </div>

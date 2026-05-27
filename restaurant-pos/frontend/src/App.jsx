@@ -13,6 +13,7 @@ import Despacho from './pages/Despacho';
 import Ingredientes from './pages/Ingredientes';
 import Recetas from './pages/Recetas';
 import Reportes from './pages/Reportes';
+import Configuracion from './pages/Configuracion';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
       <Route path="/mesas" element={<ErrorBoundary><Mesas /></ErrorBoundary>} />
       <Route path="/cocina" element={<ErrorBoundary><Cocina /></ErrorBoundary>} />
       <Route path="/despacho" element={<ErrorBoundary><Despacho /></ErrorBoundary>} />
+      <Route path="/configuracion" element={<ErrorBoundary><Configuracion /></ErrorBoundary>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
