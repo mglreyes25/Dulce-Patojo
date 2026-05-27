@@ -77,7 +77,10 @@ export default function Sidebar({ usuario, activeRoute }) {
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth > 768) setDrawerOpen(false);
+      if (window.innerWidth <= 1024 && window.innerWidth > 768) setCollapsed(true);
+      if (window.innerWidth > 1024) setCollapsed(false);
     };
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -114,7 +117,9 @@ export default function Sidebar({ usuario, activeRoute }) {
     ...(['Admin', 'Despachador'].includes(usuario?.rol)
       ? [{ to: '/despacho', icon: Rocket, label: 'Despacho', key: 'despacho' }]
       : []),
-    { to: '#reportes', icon: TrendingUp, label: 'Reportes', key: 'reportes', disabled: true },
+    ...(usuario?.rol === 'Admin'
+      ? [{ to: '/reportes', icon: TrendingUp, label: 'Reportes', key: 'reportes' }]
+      : []),
   ];
 
   return (

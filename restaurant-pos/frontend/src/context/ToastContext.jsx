@@ -1,65 +1,94 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
 
 let toastId = 0;
 
+const ICON_MAP = {
+  success: CheckCircle2,
+  error: XCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+const MAX_TOASTS = 4;
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const timersRef = useRef({});
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.map(t =>
+      t.id === id ? { ...t, exiting: true } : t
+    ));
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 300);
+  }, []);
 
   const addToast = useCallback((message, type = 'success', duration = 4000) => {
     const id = ++toastId;
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts(prev => {
+      let next = [...prev, { id, message, type, duration, exiting: false }];
+      if (next.length > MAX_TOASTS) {
+        next = next.slice(1);
+      }
+      return next;
+    });
+    const timer = setTimeout(() => {
+      removeToast(id);
     }, duration);
-  }, []);
+    timersRef.current[id] = timer;
+  }, [removeToast]);
 
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+  const handleClose = useCallback((id) => {
+    if (timersRef.current[id]) {
+      clearTimeout(timersRef.current[id]);
+      delete timersRef.current[id];
+    }
+    removeToast(id);
+  }, [removeToast]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
   }, []);
 
   return (
     <ToastContext.Provider value={{ addToast, toasts, removeToast }}>
       {children}
-      <div style={{
-        position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-        display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360,
-      }}>
-        {toasts.map(t => (
-          <div key={t.id} style={{
-            padding: '12px 16px', borderRadius: 8, fontSize: 13,
-            fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
-            background: t.type === 'success' ? 'rgba(39,174,96,0.95)' :
-                        t.type === 'error' ? 'rgba(192,57,43,0.95)' :
-                        t.type === 'warning' ? 'rgba(212,163,115,0.95)' :
-                        'rgba(42,38,31,0.95)',
-            color: t.type === 'warning' ? '#0f0d0a' : '#f0ead8',
-            border: `1px solid ${
-              t.type === 'success' ? 'rgba(39,174,96,0.3)' :
-              t.type === 'error' ? 'rgba(192,57,43,0.3)' :
-              t.type === 'warning' ? 'rgba(212,163,115,0.3)' :
-              'rgba(58,53,40,0.3)'
-            }`,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-            animation: 'slideInRight 0.25s ease-out',
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }} onClick={() => removeToast(t.id)}>
-            <span style={{ fontSize: 16 }}>
-              {t.type === 'success' ? '✓' : t.type === 'error' ? '✗' : t.type === 'warning' ? '⚠' : 'ℹ'}
-            </span>
-            {t.message}
-          </div>
-        ))}
+      <div className="toast-container">
+        {toasts.map(t => {
+          const IconComp = ICON_MAP[t.type] || Info;
+          const iconColor = {
+            success: 'var(--green)',
+            error: 'var(--red)',
+            warning: 'var(--amber)',
+            info: 'var(--blue)',
+          }[t.type] || 'var(--blue)';
+          return (
+            <div key={t.id} className={`toast toast-${t.type}${t.exiting ? ' exiting' : ''}`}>
+              <div className="toast-content">
+                <IconComp size={18} color={iconColor} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span style={{ flex: 1 }}>{t.message}</span>
+                <button className="toast-close" onClick={() => handleClose(t.id)} aria-label="Cerrar">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="toast-progress">
+                <div
+                  className="toast-progress-bar"
+                  style={{ animationDuration: `${t.duration}ms` }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </ToastContext.Provider>
   );
 }

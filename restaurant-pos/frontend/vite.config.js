@@ -15,6 +15,8 @@ export default defineConfig({
       '/ingredientes': 'http://localhost:5000',
       '/recetas': 'http://localhost:5000',
       '/proveedores': 'http://localhost:5000',
+      '/pagos': 'http://localhost:5000',
+      '/api': 'http://localhost:5000',
     }
   }
 })

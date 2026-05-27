@@ -12,6 +12,7 @@ import Cocina from './pages/Cocina';
 import Despacho from './pages/Despacho';
 import Ingredientes from './pages/Ingredientes';
 import Recetas from './pages/Recetas';
+import Reportes from './pages/Reportes';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <Route path="/inventario" element={<ErrorBoundary><Inventario /></ErrorBoundary>} />
       <Route path="/ingredientes" element={<ErrorBoundary><Ingredientes /></ErrorBoundary>} />
       <Route path="/recetas" element={<ErrorBoundary><Recetas /></ErrorBoundary>} />
+      <Route path="/reportes" element={<ErrorBoundary><Reportes /></ErrorBoundary>} />
       <Route path="/mesas" element={<ErrorBoundary><Mesas /></ErrorBoundary>} />
       <Route path="/cocina" element={<ErrorBoundary><Cocina /></ErrorBoundary>} />
       <Route path="/despacho" element={<ErrorBoundary><Despacho /></ErrorBoundary>} />
