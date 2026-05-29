@@ -1,4 +1,5 @@
 ﻿const http = require('http');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -38,7 +39,11 @@ app.use('/pagos',         pagosRoutes);
 app.use('/api/caja',      cajaRoutes);
 app.use('/api/reportes',  reportesRoutes);
 
-app.get('/', (req, res) => res.json({ message: '🚀 Backend Restaurant POS funcionando' }));
+const distPath = path.join(__dirname, '../../frontend/dist');
+app.use(express.static(distPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 const server = http.createServer(app);
 initSocket(server);
