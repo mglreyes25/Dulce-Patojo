@@ -14,6 +14,7 @@ function Dashboard() {
   const [usuario, setUsuario] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [todayStr, setTodayStr] = useState(() => new Date().toDateString());
   const navigate = useNavigate();
   useInactividad();
 
@@ -39,9 +40,17 @@ function Dashboard() {
   };
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      const next = new Date().toDateString();
+      if (next !== todayStr) setTodayStr(next);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [todayStr]);
+
+  useEffect(() => {
     if (!usuario) return;
     fetchResumen();
-  }, [usuario]);
+  }, [usuario, todayStr]);
 
   useSocket({
     cambio_estado: () => {

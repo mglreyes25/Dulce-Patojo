@@ -722,7 +722,7 @@ input:focus:not(:focus-visible) { outline: none; }
   display: inline-block; flex-shrink: 0;
 }
 .socket-indicator.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.socket-indicator.disconnected { background: transparent; border: 2px solid var(--text-dim); }
+.socket-indicator.disconnected { background: #e74c3c; box-shadow: 0 0 6px #e74c3c; opacity: 0.5; }
 
 /* Sidebar collapsed */
 .sidebar-collapsed {
