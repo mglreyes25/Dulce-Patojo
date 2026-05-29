@@ -7,7 +7,10 @@ const onlineUsers = new Set();
 
 function initSocket(server) {
   io = new Server(server, {
-    cors: { origin: '*', methods: ['GET', 'POST'] },
+    cors: { origin: '*', methods: ['GET', 'POST'], credentials: true },
+    transports: ['websocket', 'polling'],
+    pingInterval: 15000,
+    pingTimeout: 30000,
   });
 
   io.on('connection', (socket) => {
