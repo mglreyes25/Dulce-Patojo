@@ -47,9 +47,6 @@ export default function Inventario() {
       const res = await axios.get(`${API}/inventario`, { headers });
       setInventario(res.data || []);
     } catch (e) {
-      if (e.response?.status === 401 || e.response?.status === 403) {
-        localStorage.clear(); navigate('/login');
-      }
       setError('Error al cargar inventario');
     } finally {
       setLoading(false);

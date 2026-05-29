@@ -6,9 +6,10 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_URL || undefined;
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.data?.expired) {
+    const status = error.response?.status;
+    if ((status === 401 || status === 403) && localStorage.getItem('token')) {
       localStorage.clear();
-      window.location.href = '/sesion-expirada';
+      window.location.replace('/sesion-expirada');
     }
     return Promise.reject(error);
   }

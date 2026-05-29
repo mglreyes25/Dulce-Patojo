@@ -84,9 +84,6 @@ function Usuarios() {
       const res = await axios.get(`${API_URL}/usuarios`, { headers });
       setUsuarios(res.data || []);
     } catch (err) {
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.clear(); navigate('/sesion-expirada');
-      }
       setError('Error al cargar usuarios');
     } finally {
       setLoading(false);
