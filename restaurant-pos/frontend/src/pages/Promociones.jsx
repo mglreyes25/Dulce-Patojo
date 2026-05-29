@@ -1,129 +1,119 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { X } from 'lucide-react';
+import { X, Tag, Target, Gift, Clock, Power, Edit3, Trash2, Check, Plus } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import ConfirmModal from '../components/ConfirmModal';
 import API from '../utils/api';
 
 const TIPOS = {
-  descuento_porcentaje: { label: 'Descuento %',    icon: '🏷️', color: '#3498db', bg: 'rgba(52,152,219,0.15)' },
-  dos_x_uno:           { label: '2x1',             icon: '🎯', color: '#9b59b6', bg: 'rgba(155,89,182,0.15)' },
-  tres_x_dos:          { label: '3x2',             icon: '🎁', color: '#e67e22', bg: 'rgba(230,126,34,0.15)'  },
-  happy_hour:          { label: 'Happy Hour',       icon: '⏰', color: '#27ae60', bg: 'rgba(39,174,96,0.15)'  },
+  descuento_porcentaje: { label: 'Descuento %',    icon: Tag,   color: '#3498db' },
+  dos_x_uno:           { label: '2x1',             icon: Target, color: '#9b59b6' },
+  tres_x_dos:          { label: '3x2',             icon: Gift,   color: '#e67e22' },
+  happy_hour:          { label: 'Happy Hour',       icon: Clock, color: '#27ae60' },
 };
 
-const tipoInfo = (tipo) => TIPOS[tipo] || { label: tipo, icon: '🏷️', color: '#8a8070', bg: 'var(--surface)' };
+const tipoInfo = (tipo) => TIPOS[tipo] || { label: tipo, icon: Tag, color: '#8a8070' };
 
 function PromoCard({ promo, onToggle, onEditar, onEliminar, esAdmin }) {
   const info = tipoInfo(promo.tipo);
   const activa = promo.activo;
+  const IconComponent = info.icon;
 
   return (
-    <div style={{
-      background: 'var(--bg2)',
-      border: `1px solid ${activa ? info.color + '44' : 'var(--border)'}`,
-      borderRadius: '12px',
-      overflow: 'hidden',
-      opacity: activa ? 1 : 0.6,
-      transition: 'border-color .2s',
-    }}>
-      {/* Header de color */}
-      <div style={{ background: info.bg, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '24px' }}>{info.icon}</span>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: info.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              {info.label}
-            </span>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: 'var(--text)' }}>{promo.nombre}</p>
+    <div className={`promo-card${!activa ? ' inactive' : ''}`}>
+      <div className="promo-card-accent" style={{ background: info.color }} />
+
+      <div className="promo-card-content">
+        <div className="promo-card-header">
+          <div className="promo-card-header-left">
+            <div className="promo-card-icon" style={{ background: info.color + '1a', color: info.color }}>
+              <IconComponent size={20} />
+            </div>
+            <div>
+              <span className="promo-card-type" style={{ color: info.color }}>{info.label}</span>
+              <p className="promo-card-name">{promo.nombre}</p>
+            </div>
           </div>
+          <span className={`badge ${activa ? 'badge-success' : 'badge-danger'}`}>
+            {activa ? 'Activa' : 'Inactiva'}
+          </span>
         </div>
-        <span style={{
-          fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px',
-          background: activa ? 'rgba(39,174,96,0.2)' : 'rgba(192,57,43,0.2)',
-          color: activa ? '#2ecc71' : '#e74c3c'
-        }}>
-          {activa ? 'Activa' : 'Inactiva'}
-        </span>
-      </div>
 
-      {/* Cuerpo */}
-      <div style={{ padding: '14px 18px' }}>
-        {promo.descripcion && (
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.4 }}>
-            {promo.descripcion}
-          </p>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
-          {/* Descuento */}
-          {promo.valor && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Descuento</span>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: info.color }}>{promo.valor}%</span>
-            </div>
+        <div className="promo-card-body">
+          {promo.descripcion && (
+            <p className="promo-card-desc">{promo.descripcion}</p>
           )}
 
-          {/* Aplica a */}
-          {promo.productos && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Producto</span>
-              <span className="badge badge-primary">{promo.productos.nombre}</span>
-            </div>
-          )}
-          {promo.categorias && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Categoría</span>
-              <span className="badge badge-primary">{promo.categorias.nombre}</span>
-            </div>
-          )}
-          {!promo.productos && !promo.categorias && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Aplica a</span>
-              <span className="badge badge-warning">Todos los productos</span>
-            </div>
-          )}
+          <div className="promo-card-info">
+            {promo.valor && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Descuento</span>
+                <span className="promo-card-info-value promo-card-info-value--discount" style={{ color: info.color }}>
+                  {promo.valor}%
+                </span>
+              </div>
+            )}
 
-          {/* Horario happy hour */}
-          {promo.tipo === 'happy_hour' && promo.hora_inicio && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Horario</span>
-              <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 600 }}>
-                {promo.hora_inicio} — {promo.hora_fin}
+            {promo.productos && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Producto</span>
+                <span className="badge badge-primary">{promo.productos.nombre}</span>
+              </div>
+            )}
+            {promo.categorias && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Categoría</span>
+                <span className="badge badge-primary">{promo.categorias.nombre}</span>
+              </div>
+            )}
+            {!promo.productos && !promo.categorias && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Aplica a</span>
+                <span className="badge badge-warning">Todos los productos</span>
+              </div>
+            )}
+
+            {promo.tipo === 'happy_hour' && promo.hora_inicio && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Horario</span>
+                <span className="promo-card-info-value">
+                  {promo.hora_inicio} — {promo.hora_fin}
+                </span>
+              </div>
+            )}
+
+            <div className="promo-card-info-row">
+              <span className="promo-card-info-label">Aplicación</span>
+              <span className="promo-card-info-value" style={{ color: promo.automatica ? 'var(--green)' : 'var(--amber)' }}>
+                {promo.automatica ? 'Automática' : 'Manual (cajero)'}
               </span>
             </div>
+          </div>
+
+          {esAdmin && (
+            <div className="promo-card-actions">
+              <button className="btn-action btn-action--edit" onClick={() => onEditar(promo)}>
+                <Edit3 size={14} /> Editar
+              </button>
+              <button
+                className={`btn-action ${activa ? 'btn-action--delete' : 'btn-action--success'}`}
+                onClick={() => onToggle(promo)}
+              >
+                {activa ? <Power size={14} /> : <Check size={14} />}
+                {activa ? 'Desactivar' : 'Activar'}
+              </button>
+              <button
+                className="btn-action btn-action--danger"
+                style={{ marginLeft: 'auto' }}
+                onClick={() => onEliminar(promo)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           )}
-
-          {/* Aplicación */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-dim)', minWidth: '80px' }}>Aplicación</span>
-            <span style={{ fontSize: '12px', color: promo.automatica ? '#2ecc71' : '#f1c40f', fontWeight: 600 }}>
-              {promo.automatica ? '⚡ Automática' : '👆 Manual (cajero)'}
-            </span>
-          </div>
         </div>
-
-        {/* Acciones */}
-        {esAdmin && (
-          <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-            <button className="btn-small btn-edit" onClick={() => onEditar(promo)}>✏️ Editar</button>
-            <button
-              className={`btn-small ${activa ? 'btn-delete' : 'btn-success'}`}
-              onClick={() => onToggle(promo)}
-            >
-              {activa ? '🔒 Desactivar' : '✅ Activar'}
-            </button>
-            <button
-              className="btn-small"
-              style={{ background: 'var(--red-bg)', color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)', marginLeft: 'auto' }}
-              onClick={() => onEliminar(promo)}
-            >
-              🗑️
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -274,7 +264,7 @@ export default function Promociones() {
           </div>
           <div className="page-header-actions">
             {esAdmin && (
-              <button className="btn btn-primary" onClick={abrirCrear}>+ Nueva Promoción</button>
+              <button className="btn btn-primary" onClick={abrirCrear}><Plus size={18} /> Nueva Promoción</button>
             )}
           </div>
         </div>
@@ -283,10 +273,13 @@ export default function Promociones() {
         <div className="stats-grid" style={{ marginBottom: '24px' }}>
           {Object.entries(TIPOS).map(([key, t]) => {
             const count = promociones.filter(p => p.tipo === key).length;
+            const IconComponent = t.icon;
             return (
-              <div key={key} className="stat-card" style={{ textAlign: 'center', alignItems: 'center' }}>
-                <div style={{ fontSize: '24px', marginBottom: '6px' }}>{t.icon}</div>
-                <div className="stat-card-value" style={{ fontSize: '22px' }}>{count}</div>
+              <div key={key} className="stat-card">
+                <div className="stat-card-icon" style={{ background: t.color + '1a' }}>
+                  <IconComponent size={20} style={{ color: t.color }} />
+                </div>
+                <div className="stat-card-value">{count}</div>
                 <div className="stat-card-label">{t.label}</div>
               </div>
             );
@@ -304,7 +297,7 @@ export default function Promociones() {
           <select className="filtro-select" value={filtro} onChange={e => setFiltro(e.target.value)}>
             <option value="todos">Todos los tipos</option>
             {Object.entries(TIPOS).map(([key, t]) => (
-              <option key={key} value={key}>{t.icon} {t.label}</option>
+              <option key={key} value={key}>{t.label}</option>
             ))}
           </select>
           {(busqueda || filtro !== 'todos') && (
@@ -324,7 +317,7 @@ export default function Promociones() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          <div className="promo-grid">
             {promocionesFiltradas.map(p => (
               <PromoCard
                 key={p.id}

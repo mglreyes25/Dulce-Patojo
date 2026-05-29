@@ -7,6 +7,7 @@ const ctrl = require('../controllers/ingredientesController');
 router.use(auth);
 
 router.get('/',                    ctrl.listar);
+router.get('/:id',                ctrl.obtener);
 router.post('/',    requireRol('Admin'), ctrl.crear);
 router.put('/:id',  requireRol('Admin'), ctrl.actualizar);
 router.delete('/:id', requireRol('Admin'), ctrl.eliminar);

@@ -245,7 +245,7 @@ function Despacho() {
               ) : (
                 <div className="dispatch-recent">
                   {entregados.slice(0, 20).map(p => (
-                    <div key={p.id} className="dispatch-recent-row">
+                    <div key={p.id} className="dispatch-recent-row" onClick={() => setTicketModal(p)} style={{cursor:'pointer'}}>
                       <div>
                         <span className="dispatch-recent-ticket">#{(p.numero_ticket || p.id).toString().padStart(4,'0')}</span>
                         {p.cliente_nombre && <div style={{fontSize:'11px',color:'var(--text-dim)',marginTop:'2px'}}>{p.cliente_nombre}</div>}

@@ -183,18 +183,29 @@ const eliminarUsuario = async (req, res) => {
 
     if (getError || !usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    // Intentar eliminar
+    // Desvincular registros asociados antes de eliminar
+    const tablas = [
+      { table: 'pedidos', column: 'usuario_id' },
+      { table: 'pagos', column: 'usuario_id' },
+      { table: 'cierres_caja', column: 'cerrado_por' },
+      { table: 'cobros_bloqueo', column: 'usuario_id' },
+      { table: 'pedidos_estado_log', column: 'cambiado_por' },
+      { table: 'movimientos_ingredientes', column: 'usuario_id' },
+      { table: 'inventario_movimientos', column: 'usuario_id' },
+      { table: 'bitacora_permisos', column: 'usuario_id' },
+    ];
+
+    for (const { table, column } of tablas) {
+      await supabase.from(table).update({ [column]: null }).eq(column, id);
+    }
+
+    // Eliminar usuario
     const { error } = await supabase
       .from('usuarios')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      if (error.code === '23503') { // FK violation
-        return res.status(409).json({ error: 'No se puede eliminar el usuario porque tiene registros asociados (pedidos, pagos, etc.). Puede inactivarlo en su lugar.' });
-      }
-      throw error;
-    }
+    if (error) throw error;
 
     await supabase.from('bitacora_permisos').insert({
       usuario_id: req.user.id,

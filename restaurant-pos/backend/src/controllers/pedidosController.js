@@ -716,16 +716,17 @@ const obtenerResumen = async (req, res) => {
       .gte('creado_en', hoy);
 
     const { data: ventasHoy } = await supabase
-      .from('pagos')
-      .select('total')
+      .from('pedidos')
+      .select('total_con_iva, total')
+      .eq('estado', 'pagado')
       .gte('creado_en', hoy);
 
-    const ventasTotales = ventasHoy?.reduce((sum, p) => sum + Number(p.total), 0) || 0;
+    const ventasTotales = ventasHoy?.reduce((sum, p) => sum + Number(p.total_con_iva || p.total || 0), 0) || 0;
 
     const { count: prodActivos } = await supabase
       .from('productos')
       .select('*', { count: 'exact', head: true })
-      .eq('activo', true);
+      .eq('disponible', true);
 
     const { count: usersActivos } = await supabase
       .from('usuarios')

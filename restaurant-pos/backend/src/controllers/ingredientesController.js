@@ -38,6 +38,7 @@ const actualizar = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = { ...req.body, actualizado_en: new Date().toISOString() };
+    if (updates.proveedor_id === '') updates.proveedor_id = null;
     const { data, error } = await supabase.from('ingredientes')
       .update(updates).eq('id', id).select().single();
     if (error) throw error;
@@ -109,4 +110,22 @@ const movimientos = async (req, res) => {
   }
 };
 
-module.exports = { listar, crear, actualizar, eliminar, ajustarStock, movimientos };
+const obtener = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('ingredientes')
+      .select('*, proveedores(nombre)')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Ingrediente no encontrado' });
+    res.json(data);
+  } catch (e) {
+    console.error('Error obteniendo ingrediente:', e);
+    res.status(500).json({ error: 'Error al obtener ingrediente' });
+  }
+};
+
+module.exports = { listar, crear, actualizar, eliminar, ajustarStock, movimientos, obtener };

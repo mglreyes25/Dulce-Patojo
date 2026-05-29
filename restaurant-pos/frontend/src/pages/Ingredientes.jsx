@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Pencil, Package, ClipboardList, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
+import ActionButton from '../components/ActionButton';
 import { useToast } from '../context/ToastContext';
 import ConfirmModal from '../components/ConfirmModal';
 import Pagination from '../components/Pagination';
@@ -105,10 +106,10 @@ function Ingredientes() {
     setForm({ nombre: '', unidad: 'unidad', stock: 0, stock_minimo: 0, precio_compra: 0, proveedor_id: '' });
   };
 
-  const verMovimientos = async (id) => {
-    setShowMovimientos(id);
+  const verMovimientos = async (ing) => {
+    setShowMovimientos(ing);
     try {
-      const res = await axios.get(`${API}/ingredientes/${id}/movimientos`, { headers });
+      const res = await axios.get(`${API}/ingredientes/${ing.id}/movimientos`, { headers });
       setMovimientos(res.data || []);
     } catch {
       setMovimientos([]);
@@ -195,12 +196,10 @@ function Ingredientes() {
                       <td>${Number(i.precio_compra).toFixed(2)}</td>
                       <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{i.proveedores?.nombre || '—'}</td>
                       <td className="td-actions">
-                        <button className="btn-small btn-edit" onClick={() => abrirEditar(i)}>✏️</button>
-                        <button className="btn-small" style={{ background: 'var(--surface)', color: '#f1c40f', border: '1px solid rgba(241,196,15,0.3)' }}
-                          onClick={() => setAjusteModal({ id: i.id, nombre: i.nombre, stock: i.stock })}>📦</button>
-                        <button className="btn-small" style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                          onClick={() => verMovimientos(i.id)}>📋</button>
-                        <button className="btn-small btn-delete" onClick={() => setDeleteConfirm(i)}>🗑️</button>
+                        <ActionButton icon={Pencil} variant="edit" onClick={() => abrirEditar(i)} />
+                        <ActionButton icon={Package} variant="warning" onClick={() => setAjusteModal({ id: i.id, nombre: i.nombre, stock: i.stock })} />
+                        <ActionButton icon={ClipboardList} variant="secondary" onClick={() => verMovimientos(i)} />
+                        <ActionButton icon={Trash2} variant="delete" onClick={() => setDeleteConfirm(i)} />
                       </td>
                     </tr>
                   );
@@ -304,43 +303,70 @@ function Ingredientes() {
         {/* Modal movimientos */}
         {showMovimientos && (
           <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setShowMovimientos(null)}>
-            <div className="modal modal-wide" onClick={e => e.stopPropagation()} style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>Movimientos</h3>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>Historial de movimientos</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {showMovimientos.nombre}
+                    {movimientos.length > 0 && (
+                      <span style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 10, background: 'var(--surface)', fontSize: 11, color: 'var(--text-dim)' }}>
+                        {movimientos.length} registro{movimientos.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </p>
+                </div>
                 <button className="modal-close" onClick={() => setShowMovimientos(null)}><X size={18} /></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body" style={{ padding: 0 }}>
                 {movimientos.length === 0 ? (
-                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 20 }}>Sin movimientos</p>
+                  <div style={{ padding: 48, textAlign: 'center' }}>
+                    <ClipboardList size={40} style={{ color: 'var(--text-dim)', marginBottom: 12, opacity: 0.4 }} />
+                    <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0 }}>Sin movimientos registrados</p>
+                    <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '4px 0 0' }}>Los movimientos aparecerán cuando se realicen ajustes de stock.</p>
+                  </div>
                 ) : (
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Tipo</th>
-                        <th>Cantidad</th>
-                        <th>Stock Ant.</th>
-                        <th>Stock Nuevo</th>
-                        <th>Descripción</th>
-                        <th>Fecha</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {movimientos.map(m => (
-                        <tr key={m.id}>
-                          <td><span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>{m.tipo}</span></td>
-                          <td style={{ fontWeight: 600 }}>{m.cantidad}</td>
-                          <td>{m.stock_anterior}</td>
-                          <td>{m.stock_nuevo}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(m.creado_en).toLocaleString('es-GT')}</td>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table" style={{ minWidth: 0 }}>
+                      <thead>
+                        <tr>
+                          <th style={{ paddingLeft: 24 }}>Tipo</th>
+                          <th style={{ textAlign: 'right' }}>Cantidad</th>
+                          <th style={{ textAlign: 'right' }}>Stock Ant.</th>
+                          <th style={{ textAlign: 'right' }}>Stock Nuevo</th>
+                          <th>Descripción</th>
+                          <th style={{ paddingRight: 24 }}>Fecha</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {movimientos.map(m => {
+                          const diff = Number(m.stock_nuevo) - Number(m.stock_anterior);
+                          return (
+                            <tr key={m.id}>
+                              <td style={{ paddingLeft: 24 }}>
+                                <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>
+                                  {m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'}
+                                </span>
+                              </td>
+                              <td style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                                <span style={{ color: diff > 0 ? 'var(--green)' : diff < 0 ? 'var(--red)' : 'var(--text-muted)' }}>
+                                  {diff > 0 ? '+' : ''}{Number(m.cantidad).toFixed(3)}
+                                </span>
+                              </td>
+                              <td style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{Number(m.stock_anterior).toFixed(3)}</td>
+                              <td style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right', fontWeight: 600 }}>{Number(m.stock_nuevo).toFixed(3)}</td>
+                              <td style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descripcion || '—'}</td>
+                              <td style={{ fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap', paddingRight: 24 }}>{new Date(m.creado_en).toLocaleString('es-GT')}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
               <div className="modal-footer">
-                <button className="btn" onClick={() => setShowMovimientos(null)}>Cerrar</button>
+                <button className="btn" style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }} onClick={() => setShowMovimientos(null)}>Cerrar</button>
               </div>
             </div>
           </div>

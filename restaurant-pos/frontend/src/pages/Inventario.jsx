@@ -4,8 +4,9 @@ import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
+import ActionButton from '../components/ActionButton';
 import API from '../utils/api';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { X, Loader2, ClipboardList, Pencil } from 'lucide-react';
 
 export default function Inventario() {
   const [inventario, setInventario]     = useState([]);
@@ -126,10 +127,10 @@ export default function Inventario() {
     setAjusteDesc('');
   };
 
-  const verMovimientos = async (productoId) => {
-    setShowMovimientos(productoId);
+  const verMovimientos = async (producto) => {
+    setShowMovimientos(producto);
     try {
-      const res = await axios.get(`${API}/inventario/movimientos/${productoId}`, { headers });
+      const res = await axios.get(`${API}/inventario/movimientos/${producto.id}`, { headers });
       setMovimientos(res.data || []);
     } catch {
       setMovimientos([]);
@@ -279,16 +280,8 @@ export default function Inventario() {
                         )}
                       </td>
                       <td className="td-actions">
-                        <button className="btn-small btn-edit" onClick={() => verMovimientos(p.id)}>
-                          📋 Mov.
-                        </button>
-                        <button
-                          className="btn-small"
-                          style={{ background: 'var(--surface)', color: '#f1c40f', border: '1px solid rgba(241,196,15,0.3)' }}
-                          onClick={() => abrirAjuste(p.id, p.stock)}
-                        >
-                          ✏️ Ajustar
-                        </button>
+                        <ActionButton icon={ClipboardList} variant="edit" label="Mov." onClick={() => verMovimientos(p)} />
+                        <ActionButton icon={Pencil} variant="warning" label="Ajustar" onClick={() => abrirAjuste(p.id, p.stock)} />
                       </td>
                     </tr>
                   ))}
@@ -363,50 +356,69 @@ export default function Inventario() {
 
       {/* Modal movimientos */}
       {showMovimientos && (
-        <div className="modal-overlay" onClick={() => setShowMovimientos(null)}>
-          <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setShowMovimientos(null)}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">📋 Movimientos</h3>
-              <button className="modal-close" onClick={() => setShowMovimientos(null)}><X size={20} /></button>
-            </div>
-            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-              {movimientos.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
-                  Sin movimientos registrados
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: 16 }}>Historial de movimientos</h3>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {showMovimientos.nombre}
+                  {movimientos.length > 0 && (
+                    <span style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 10, background: 'var(--surface)', fontSize: 11, color: 'var(--text-dim)' }}>
+                      {movimientos.length} registro{movimientos.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </p>
+              </div>
+              <button className="modal-close" onClick={() => setShowMovimientos(null)}><X size={18} /></button>
+            </div>
+            <div className="modal-body" style={{ padding: 0 }}>
+              {movimientos.length === 0 ? (
+                <div style={{ padding: 48, textAlign: 'center' }}>
+                  <ClipboardList size={40} style={{ color: 'var(--text-dim)', marginBottom: 12, opacity: 0.4 }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0 }}>Sin movimientos registrados</p>
+                  <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '4px 0 0' }}>Los movimientos aparecerán cuando se realicen entradas, salidas o ajustes de stock.</p>
+                </div>
               ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Cantidad</th>
-                      <th>Stock Anterior</th>
-                      <th>Stock Nuevo</th>
-                      <th>Descripción</th>
-                      <th>Usuario</th>
-                      <th>Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {movimientos.map(m => (
-                      <tr key={m.id}>
-                        <td>
-                          <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>
-                            {m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}</td>
-                        <td>{m.stock_anterior}</td>
-                        <td style={{ fontWeight: 600 }}>{m.stock_nuevo}</td>
-                        <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.descripcion || '—'}</td>
-                        <td style={{ fontSize: '12px' }}>{m.usuarios?.nombre || '—'}</td>
-                        <td style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {new Date(m.creado_en).toLocaleString('es-GT')}
-                        </td>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table" style={{ minWidth: 0 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ paddingLeft: 24 }}>Tipo</th>
+                        <th style={{ textAlign: 'right' }}>Cantidad</th>
+                        <th style={{ textAlign: 'right' }}>Stock Ant.</th>
+                        <th style={{ textAlign: 'right' }}>Stock Nuevo</th>
+                        <th>Descripción</th>
+                        <th>Usuario</th>
+                        <th style={{ paddingRight: 24 }}>Fecha</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {movimientos.map(m => {
+                        const diff = Number(m.stock_nuevo) - Number(m.stock_anterior);
+                        return (
+                          <tr key={m.id}>
+                            <td style={{ paddingLeft: 24 }}>
+                              <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : m.tipo === 'salida' ? 'badge-danger' : 'badge-warning'}`}>
+                                {m.tipo === 'entrada' ? 'Entrada' : m.tipo === 'salida' ? 'Salida' : 'Ajuste'}
+                              </span>
+                            </td>
+                            <td style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                              <span style={{ color: diff > 0 ? 'var(--green)' : diff < 0 ? 'var(--red)' : 'var(--text-muted)' }}>
+                                {diff > 0 ? '+' : ''}{Number(m.cantidad).toFixed(3)}
+                              </span>
+                            </td>
+                            <td style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{Number(m.stock_anterior).toFixed(3)}</td>
+                            <td style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right', fontWeight: 600 }}>{Number(m.stock_nuevo).toFixed(3)}</td>
+                            <td style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.descripcion || '—'}</td>
+                            <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>{m.usuarios?.nombre || '—'}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-dim)', whiteSpace: 'nowrap', paddingRight: 24 }}>{new Date(m.creado_en).toLocaleString('es-GT')}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
             <div className="modal-footer">

@@ -5,8 +5,7 @@ import {
   PartyPopper, Coffee, Map, ChefHat, Rocket, TrendingUp, LogOut,
   Menu, X, Settings,
 } from 'lucide-react';
-import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../utils/api';
+import useSocket from '../hooks/useSocket';
 
 const rolColor = (rol) =>
   ({ Admin: 'primary', Cajero: 'info', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
@@ -88,12 +87,21 @@ export default function Sidebar({ usuario, activeRoute }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
 
+  const { socket: socketRef } = useSocket();
+
   useEffect(() => {
-    const s = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
-    s.on('connect', () => setSocketConnected(true));
-    s.on('disconnect', () => setSocketConnected(false));
-    return () => s.disconnect();
-  }, []);
+    const s = socketRef.current;
+    if (!s) return;
+    setSocketConnected(s.connected);
+    const onConnect = () => setSocketConnected(true);
+    const onDisconnect = () => setSocketConnected(false);
+    s.on('connect', onConnect);
+    s.on('disconnect', onDisconnect);
+    return () => {
+      s.off('connect', onConnect);
+      s.off('disconnect', onDisconnect);
+    };
+  }, [socketRef]);
 
   useEffect(() => {
     const handleResize = () => {

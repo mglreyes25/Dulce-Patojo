@@ -8,6 +8,7 @@ import {
   DollarSign, ShoppingCart, Target, Package,
   Download, RefreshCw,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import API from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
@@ -104,9 +105,13 @@ export default function Reportes() {
     setLoadingVentas(true);
     setErrorVentas('');
     try {
-      const res = await axios.get(`${API}/api/reportes/ventas`, { params: getQueryParams(), headers });
+      const params = getQueryParams();
+      console.log('📡 GET /api/reportes/ventas', params);
+      const res = await axios.get(`${API}/api/reportes/ventas`, { params, headers });
+      console.log('✅ /ventas response:', JSON.stringify(res.data, null, 2));
       setVentas(res.data);
     } catch (err) {
+      console.error('❌ Error cargarVentas:', err.response?.data || err.message);
       setErrorVentas(err.response?.data?.error || 'Error al cargar ventas');
     } finally {
       setLoadingVentas(false);
@@ -117,9 +122,13 @@ export default function Reportes() {
     setLoadingProductos(true);
     setErrorProductos('');
     try {
-      const res = await axios.get(`${API}/api/reportes/productos`, { params: { ...getQueryParams(), limite: 5 }, headers });
+      const params = { ...getQueryParams(), limite: 5 };
+      console.log('📡 GET /api/reportes/productos', params);
+      const res = await axios.get(`${API}/api/reportes/productos`, { params, headers });
+      console.log('✅ /productos response:', JSON.stringify(res.data, null, 2));
       setProductos(res.data);
     } catch (err) {
+      console.error('❌ Error cargarProductos:', err.response?.data || err.message);
       setErrorProductos(err.response?.data?.error || 'Error al cargar productos');
     } finally {
       setLoadingProductos(false);
@@ -133,9 +142,12 @@ export default function Reportes() {
     try {
       const params = getQueryParams();
       params.tipo = invFiltro;
+      console.log('📡 GET /api/reportes/inventario', params);
       const res = await axios.get(`${API}/api/reportes/inventario`, { params, headers });
+      console.log('✅ /inventario response:', JSON.stringify(res.data, null, 2));
       setMovimientos(res.data);
     } catch (err) {
+      console.error('❌ Error cargarMovimientos:', err.response?.data || err.message);
       setErrorMovimientos(err.response?.data?.error || 'Error al cargar movimientos');
     } finally {
       setLoadingMovimientos(false);
@@ -146,9 +158,13 @@ export default function Reportes() {
     setLoadingCaja(true);
     setErrorCaja('');
     try {
-      const res = await axios.get(`${API}/api/reportes/caja`, { params: getQueryParams(), headers });
+      const params = getQueryParams();
+      console.log('📡 GET /api/reportes/caja', params);
+      const res = await axios.get(`${API}/api/reportes/caja`, { params, headers });
+      console.log('✅ /caja response:', JSON.stringify(res.data, null, 2));
       setCaja(res.data);
     } catch (err) {
+      console.error('❌ Error cargarCaja:', err.response?.data || err.message);
       setErrorCaja(err.response?.data?.error || 'Error al cargar caja');
     } finally {
       setLoadingCaja(false);
@@ -159,14 +175,13 @@ export default function Reportes() {
     if (usuario?.rol !== 'Admin') return;
     cargarVentas();
     cargarProductos();
-    cargarMovimientos();
     cargarCaja();
-  }, [periodo, fechaInicio, fechaFin, usuario, cargarVentas, cargarProductos, cargarMovimientos, cargarCaja]);
+  }, [periodo, fechaInicio, fechaFin, usuario]);
 
   useEffect(() => {
     if (usuario?.rol !== 'Admin') return;
     cargarMovimientos();
-  }, [invFiltro, cargarMovimientos, usuario]);
+  }, [periodo, fechaInicio, fechaFin, invFiltro, usuario]);
 
   if (!usuario || usuario.rol !== 'Admin') return null;
 
@@ -181,20 +196,89 @@ export default function Reportes() {
     return d.toLocaleDateString('es-SV', { day: '2-digit', month: '2-digit' });
   };
 
-  const exportCSV = () => {
+  const exportExcel = () => {
     if (!ventas?.ventas_por_dia) return;
-    let csv = 'Fecha,Total,Pedidos\n';
-    ventas.ventas_por_dia.forEach(v => {
-      csv += `${v.fecha},${v.total},${v.pedidos}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `reporte_ventas_${periodo}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+
+    const wb = XLSX.utils.book_new();
+
+    const formatDate = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      return dt.toLocaleDateString('es-SV', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const periodoLabel = PERIODOS.find(p => p.value === periodo)?.label || periodo;
+    const periodStr = `${periodoLabel}${periodo === 'custom' && fechaInicio ? ` (${fechaInicio} - ${fechaFin})` : ''}`;
+    const generatedAt = new Date().toLocaleString('es-SV');
+
+    const resumenData = [
+      ['Dulce Patojo - Reporte de Gestión'],
+      [`Período: ${periodStr}`],
+      [`Generado el: ${generatedAt}`],
+      [],
+      ['Métrica', 'Valor'],
+      ['Ventas Totales', `$${(ventas?.total_ventas || 0).toFixed(2)}`],
+      ['Total Pedidos', String(ventas?.total_pedidos || 0)],
+      ['Ticket Promedio', `$${(ventas?.ticket_promedio || 0).toFixed(2)}`],
+      ['Mov. Inventario', String((movimientos?.entradas || 0) + (movimientos?.salidas || 0))],
+      ['Total Ingresos', `$${(caja?.total_ingresos || 0).toFixed(2)}`],
+      ['Total Egresos', `$${(caja?.total_egresos || 0).toFixed(2)}`],
+      ['Balance Neto', `$${(caja?.balance_neto || 0).toFixed(2)}`],
+    ];
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+    ];
+    wsResumen['!cols'] = [{ wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Ejecutivo');
+
+    const ventasHeader = [['Fecha', 'Total', 'Pedidos']];
+    const ventasRows = ventas.ventas_por_dia.map(v => [
+      formatDate(v.fecha), Number(v.total || 0), v.pedidos,
+    ]);
+    const wsVentas = XLSX.utils.aoa_to_sheet([...ventasHeader, ...ventasRows]);
+    wsVentas['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, wsVentas, 'Ventas por Día');
+
+    if (productos?.length > 0) {
+      const prodHeader = [['#', 'Producto', 'Cantidad', 'Total Vendido']];
+      const prodRows = productos.map((p, i) => [
+        i + 1, p.nombre, p.cantidad_total, Number(p.total_vendido || 0),
+      ]);
+      const wsProd = XLSX.utils.aoa_to_sheet([...prodHeader, ...prodRows]);
+      wsProd['!cols'] = [{ wch: 6 }, { wch: 30 }, { wch: 14 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(wb, wsProd, 'Productos');
+    }
+
+    if (invMovs.length > 0) {
+      const invHeader = [['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Descripción']];
+      const invRows = invMovs.map(m => [
+        formatDate(m.fecha), m.producto, m.tipo, m.cantidad, m.descripcion || '-',
+      ]);
+      const wsInv = XLSX.utils.aoa_to_sheet([...invHeader, ...invRows]);
+      wsInv['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, wsInv, 'Inventario');
+    }
+
+    if (caja?.movimientos?.length > 0) {
+      const cajaHeader = [
+        [`Ingresos: $${(caja.total_ingresos || 0).toFixed(2)}  |  Egresos: $${(caja.total_egresos || 0).toFixed(2)}  |  Balance: $${(caja.balance_neto || 0).toFixed(2)}`],
+        [],
+        ['Fecha', 'Tipo', 'Monto', 'Descripción'],
+      ];
+      const cajaRows = caja.movimientos.map(m => [
+        formatDate(m.fecha), m.tipo, Number(m.monto || 0), m.descripcion || '-',
+      ]);
+      const wsCaja = XLSX.utils.aoa_to_sheet([...cajaHeader, ...cajaRows]);
+      wsCaja['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
+      wsCaja['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, wsCaja, 'Resumen de Caja');
+    }
+
+    XLSX.writeFile(wb, `Reporte_DulcePatojo_${periodo}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
-
-
 
   return (
     <div className="dashboard-page">
@@ -209,8 +293,8 @@ export default function Reportes() {
             <button className="btn btn-secondary" onClick={() => { cargarVentas(); cargarProductos(); cargarMovimientos(); cargarCaja(); }}>
               <RefreshCw size={16} /> Actualizar
             </button>
-            <button className="btn btn-primary" onClick={exportCSV}>
-              <Download size={16} /> Exportar
+            <button className="btn btn-primary" onClick={exportExcel}>
+              <Download size={16} /> Exportar Excel
             </button>
           </div>
         </div>
@@ -473,6 +557,7 @@ export default function Reportes() {
             </>
           )}
         </div>
+
       </div>
     </div>
   );

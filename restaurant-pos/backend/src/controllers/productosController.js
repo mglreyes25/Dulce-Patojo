@@ -294,7 +294,7 @@ const obtenerCombos = async (req, res) => {
     const combosConProductos = await Promise.all(combos.map(async (combo) => {
       const { data: items } = await supabase
         .from('combo_productos')
-        .select('cantidad, productos(id, nombre, precio)')
+        .select('cantidad, productos(id, nombre, precio, stock, stock_minimo)')
         .eq('combo_id', combo.id);
       return { ...combo, items: items || [] };
     }));

@@ -3,6 +3,7 @@ import { Search, X, Loader2, DollarSign, Eye, Lock, Clock } from 'lucide-react';
 import Pagination from './Pagination';
 import BloqueoTimer from './BloqueoTimer';
 import ModalDetalleCobro from './ModalDetalleCobro';
+import ModalTicketView from './ModalTicketView';
 
 export default function CobrosPendientesModal({
   open,
@@ -31,8 +32,18 @@ export default function CobrosPendientesModal({
   estadoBadgeClass,
 }) {
   const [cobroSeleccionado, setCobroSeleccionado] = useState(null);
+  const [verTicket, setVerTicket] = useState(null);
 
-  const handleVerDetalle = (pedido) => {
+  const handleVerTicket = (pedido) => {
+    setVerTicket(pedido);
+  };
+
+  const cerrarTicket = () => {
+    setVerTicket(null);
+  };
+
+  const handleIniciarCobroConModal = async (pedido) => {
+    await onIniciarCobro(pedido);
     setCobroSeleccionado(pedido);
   };
 
@@ -177,7 +188,7 @@ export default function CobrosPendientesModal({
                       ) : (
                         <button
                           className="cobros-modal-btn-iniciar"
-                          onClick={() => onIniciarCobro(p)}
+                          onClick={() => handleIniciarCobroConModal(p)}
                           disabled={bloqueandoCobro === p.id}
                         >
                           {bloqueandoCobro === p.id ? (
@@ -191,7 +202,7 @@ export default function CobrosPendientesModal({
 
                       <button
                         className="cobros-modal-btn-ver"
-                        onClick={() => handleVerDetalle(p)}
+                        onClick={() => handleVerTicket(p)}
                       >
                         <Eye size={16} /> Ver
                       </button>
@@ -199,7 +210,7 @@ export default function CobrosPendientesModal({
                       {miBloqueo && (
                         <button
                           className="cobros-modal-btn-pagar"
-                          onClick={() => handleVerDetalle(p)}
+                          onClick={() => setCobroSeleccionado(p)}
                         >
                           <DollarSign size={16} /> Cobrar
                         </button>
@@ -229,6 +240,12 @@ export default function CobrosPendientesModal({
             onPagoExitoso={handlePagoExitoso}
             procesandoPago={procesandoPago}
             setProcesandoPago={setProcesandoPago}
+          />
+        )}
+        {verTicket && (
+          <ModalTicketView
+            pedido={verTicket}
+            onClose={cerrarTicket}
           />
         )}
       </div>

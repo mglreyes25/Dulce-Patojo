@@ -221,17 +221,26 @@ export default function ModalDetalleCobro({
                 })}
               </div>
 
-              <label className="pos-label">Propina</label>
-              <div className="cobros-detail-grid-tips">
-                {[0, 0.50, 1.00, 2.00, 5.00].map((tip) => (
-                  <button
-                    key={tip}
-                    className={`pos-selection-tile${propina === tip ? ' active' : ''}`}
-                    onClick={() => setPropina(tip)}
-                  >
-                    {tip === 0 ? 'Sin propina' : `$${tip.toFixed(2)}`}
-                  </button>
-                ))}
+              <label className="pos-label">Propina (voluntaria)</label>
+              <div className="pos-tip-group">
+                <button
+                  className={`pos-tip-btn${propina === 0 ? ' active' : ''}`}
+                  onClick={() => setPropina(0)}
+                >
+                  Sin propina
+                </button>
+                <div className="pos-tip-input-wrap">
+                  <span className="pos-tip-currency">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={propina || ''}
+                    onChange={e => setPropina(Number(e.target.value) || 0)}
+                    className="pos-input"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
               {metodoPago === 'efectivo' && (

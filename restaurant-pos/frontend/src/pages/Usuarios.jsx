@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { X } from 'lucide-react';
+import { X, Pencil, Lock, Check, Trash2 } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
 import PasswordInput from '../components/PasswordInput';
+import ActionButton from '../components/ActionButton';
 import { validarPassword } from '../utils/password';
+import { useToast } from '../context/ToastContext';
 
 const rolBadge = (rol) => {
   const map = {
@@ -33,8 +35,10 @@ function Usuarios() {
   const [inactivarTarget, setInactivarTarget]       = useState(null);
   const [motivoInactivar, setMotivoInactivar]       = useState('');
 
-  // Eliminar modal
-  const [showEliminarModal, setShowEliminarModal] = useState(false);
+  // Eliminar modal (dos pasos)
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showConfirmarModal, setShowConfirmarModal] = useState(false);
+  const [confirmarInput, setConfirmarInput]       = useState('');
   const [eliminarTarget, setEliminarTarget]       = useState(null);
   const [eliminando, setEliminando]               = useState(false);
 
@@ -52,6 +56,7 @@ function Usuarios() {
   const token   = localStorage.getItem('token');
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
   const headers = { Authorization: `Bearer ${token}` };
+  const { addToast } = useToast();
 
   useInactividad();
 
@@ -177,12 +182,13 @@ function Usuarios() {
     setEliminando(true);
     try {
       await axios.delete(`${API_URL}/usuarios/${eliminarTarget.id}`, { headers });
-      setShowEliminarModal(false);
+      addToast('Usuario eliminado permanentemente', 'success');
+      setShowConfirmarModal(false);
       setEliminarTarget(null);
       cargarUsuarios();
     } catch (err) {
-      setError(err.response?.data?.error || 'Error al eliminar usuario');
-      setShowEliminarModal(false);
+      addToast(err.response?.data?.error || 'Error al eliminar usuario', 'error');
+      setShowConfirmarModal(false);
     } finally {
       setEliminando(false);
     }
@@ -305,22 +311,14 @@ function Usuarios() {
                         </span>
                       </td>
                       <td className="td-actions">
-                        <button className="btn-small btn-edit" onClick={() => abrirEditar(u)}>
-                          ✏️ Editar
-                        </button>
-                        <button
-                          className={`btn-small ${u.activo ? 'btn-delete' : 'btn-success'}`}
+                        <ActionButton icon={Pencil} variant="edit" label="Editar" onClick={() => abrirEditar(u)} />
+                        <ActionButton
+                          icon={u.activo ? Lock : Check}
+                          variant={u.activo ? 'delete' : 'success'}
+                          label={u.activo ? 'Inactivar' : 'Activar'}
                           onClick={() => handleToggle(u)}
-                        >
-                          {u.activo ? '🔒 Inactivar' : '✅ Activar'}
-                        </button>
-                        <button
-                          className="btn-small"
-                          style={{ background: 'var(--red-bg)', color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)' }}
-                          onClick={() => { setEliminarTarget(u); setShowEliminarModal(true); }}
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        />
+                        <ActionButton icon={Trash2} variant="danger" label="Eliminar" onClick={() => { setEliminarTarget(u); setShowConfirmDelete(true); }} />
                       </td>
                     </tr>
                   ))}
@@ -412,28 +410,68 @@ function Usuarios() {
         </div>
       )}
 
-      {/* ── Modal eliminar ── */}
-      {showEliminarModal && (
-        <div className="modal-overlay" onClick={() => setShowEliminarModal(false)} role="dialog" aria-modal="true">
+      {/* ── Primer paso: confirmar eliminación ── */}
+      {showConfirmDelete && (
+        <div className="modal-overlay" onClick={() => setShowConfirmDelete(false)} role="dialog" aria-modal="true">
           <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Eliminar Usuario</h3>
-              <button className="modal-close-btn" onClick={() => setShowEliminarModal(false)} aria-label="Cerrar">
+              <button className="modal-close-btn" onClick={() => setShowConfirmDelete(false)} aria-label="Cerrar">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                ¿Estás seguro de eliminar permanentemente a <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowConfirmDelete(false)}>Cancelar</button>
+              <button
+                className="btn btn-danger"
+                onClick={() => { setShowConfirmDelete(false); setShowConfirmarModal(true); setConfirmarInput(''); }}
+              >
+                Sí, estoy seguro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Segundo paso: escribir "confirmar" ── */}
+      {showConfirmarModal && (
+        <div className="modal-overlay" onClick={() => setShowConfirmarModal(false)} role="dialog" aria-modal="true">
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Confirmar eliminación</h3>
+              <button className="modal-close-btn" onClick={() => setShowConfirmarModal(false)} aria-label="Cerrar">
                 <X size={18} />
               </button>
             </div>
             <div className="modal-body">
               {error && <div className="message error-message">{error}</div>}
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                ¿Estás seguro de eliminar permanentemente a <strong style={{ color: 'var(--text)' }}>{eliminarTarget?.nombre}</strong>?
+                Para confirmar, escribe <strong style={{ color: 'var(--text)' }}>confirmar</strong> en el campo de abajo.
               </p>
-              <p style={{ fontSize: '13px', color: 'var(--red)', background: 'var(--red-bg)', padding: '10px 14px', borderRadius: '8px', marginTop: '12px' }}>
-                Esta acción no se puede deshacer. Si el usuario tiene registros asociados (pedidos, pagos), no se podrá eliminar.
-              </p>
+              <div className="form-group" style={{ marginTop: '12px' }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={confirmarInput}
+                  onChange={(e) => setConfirmarInput(e.target.value)}
+                  placeholder="Escribe 'confirmar'"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter' && confirmarInput === 'confirmar' && !eliminando) handleEliminar(); }}
+                />
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setShowEliminarModal(false)}>Cancelar</button>
-              <button className="btn btn-danger" onClick={handleEliminar} disabled={eliminando}>
+              <button className="btn btn-ghost" onClick={() => setShowConfirmarModal(false)}>Cancelar</button>
+              <button
+                className="btn btn-danger"
+                disabled={confirmarInput !== 'confirmar' || eliminando}
+                onClick={handleEliminar}
+              >
                 {eliminando ? 'Eliminando…' : 'Eliminar Permanentemente'}
               </button>
             </div>

@@ -40,6 +40,45 @@ const TIPOS_PROMO = {
   happy_hour: { label: 'Happy Hour', icon: Clock, tone: 'green' },
 };
 
+const calcularDescuentoPromocion = (promo, carrito) => {
+  if (!promo.activo) return 0;
+
+  const itemsElegibles = carrito.filter(item => {
+    if (item.tipo !== 'producto') return false;
+    if (promo.producto_id && Number(item.id) !== Number(promo.producto_id)) return false;
+    if (promo.categoria_id && item.categoria_id !== undefined && Number(item.categoria_id) !== Number(promo.categoria_id)) return false;
+    return true;
+  });
+
+  if (itemsElegibles.length === 0) return 0;
+
+  switch (promo.tipo) {
+    case 'descuento_porcentaje':
+    case 'happy_hour': {
+      const pct = Number(promo.valor || 0) / 100;
+      return itemsElegibles.reduce((sum, item) =>
+        sum + Number(item.precio || 0) * item.cantidad * pct, 0
+      );
+    }
+    case 'dos_x_uno': {
+      const masBarato = itemsElegibles.reduce((min, item) =>
+        Math.min(min, Number(item.precio || 0)), Infinity
+      );
+      return masBarato === Infinity ? 0 : masBarato;
+    }
+    case 'tres_x_dos': {
+      const totalItems = itemsElegibles.reduce((sum, item) => sum + item.cantidad, 0);
+      if (totalItems < 3) return 0;
+      const masBarato = itemsElegibles.reduce((min, item) =>
+        Math.min(min, Number(item.precio || 0)), Infinity
+      );
+      return masBarato === Infinity ? 0 : masBarato;
+    }
+    default:
+      return 0;
+  }
+};
+
 const MODAL_PAGO = 'pago';
 const MODAL_TICKET = 'ticket';
 const MODAL_TIPO = 'tipo';
@@ -84,6 +123,7 @@ export default function Caja() {
   const [bloqueandoCobro, setBloqueandoCobro] = useState(null);
   const [errorCobro, setErrorCobro] = useState('');
   const [refetchCobros, setRefetchCobros] = useState(0);
+  const [descExpandida, setDescExpandida] = useState(null);
   const navigate = useNavigate();
   const { addToast } = useToast();
 
@@ -93,11 +133,35 @@ export default function Caja() {
 
   useInactividad(300000, () => navigate('/login'));
 
-  const total = carrito.reduce((sum, item) => sum + (Number(item.precio_final || item.precio || 0) * item.cantidad), 0);
-  const descuentoTotal = carrito.reduce((sum, item) => sum + (Number(item.descuento || 0) * item.cantidad), 0);
-  const subtotal = total + descuentoTotal;
+  const IVA_TASA = 0.13;
 
-  const montoPago = pedidoActual ? Number(pedidoActual.total_con_iva || pedidoActual.total) : total;
+  // Retorna null si el combo tiene stock suficiente,
+  // o un string con el nombre del primer producto faltante
+  const comboProductoFaltante = (combo, multiplicador = 1) => {
+    if (!combo.items || combo.items.length === 0) return 'El combo no tiene productos';
+    for (const item of combo.items) {
+      const stock = Number(item.productos?.stock ?? 0);
+      const necesita = item.cantidad * multiplicador;
+      const nombre = item.productos?.nombre || 'Producto';
+      if (stock <= 0) return nombre;
+      if (stock < necesita) return nombre;
+    }
+    return null;
+  };
+
+  const subtotal = carrito.reduce((sum, item) => sum + (Number(item.precio_final || item.precio || 0) * item.cantidad), 0);
+  const descuentoTotal = carrito.reduce((sum, item) => sum + (Number(item.descuento || 0) * item.cantidad), 0);
+  const total = Math.max(0, subtotal - descuentoTotal);
+
+  const iva = Math.round(carrito.reduce((sum, item) => {
+    if (item.exento_iva) return sum;
+    const precio = Number(item.precio_final || item.precio || 0);
+    return sum + precio * item.cantidad * IVA_TASA;
+  }, 0) * 100) / 100;
+
+  const totalConIva = Math.max(0, Math.round((total + iva) * 100) / 100);
+
+  const montoPago = pedidoActual ? Number(pedidoActual.total_con_iva || pedidoActual.total) : totalConIva;
   const cambio = Math.max(0, Number(montoRecibido || 0) - montoPago);
 
   useEffect(() => {
@@ -186,38 +250,109 @@ export default function Caja() {
     },
   });
 
+  const agregarAutoPromos = (cart, esProducto) => {
+    if (!esProducto) return cart;
+
+    const idsEnCartel = cart.filter(i => i.tipo === 'promocion').map(p => p.id);
+    const ahora = new Date().toTimeString().slice(0, 5);
+
+    for (const promo of promociones) {
+      if (!promo.activo || !promo.automatica) continue;
+      if (idsEnCartel.includes(promo.id)) continue;
+      if (promo.tipo === 'happy_hour' && promo.hora_inicio && promo.hora_fin) {
+        if (ahora < promo.hora_inicio || ahora > promo.hora_fin) continue;
+      }
+
+      const descuento = calcularDescuentoPromocion(promo, cart);
+      if (descuento > 0) {
+        cart = [...cart, { ...promo, tipo: 'promocion', cantidad: 1, precio: 0, precio_final: 0, descuento }];
+      }
+    }
+    return cart;
+  };
+
   const agregarAlCarrito = (item, tipo) => {
     if (tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0) {
       addToast(`"${item.nombre}" no tiene stock disponible`, 'error');
       return;
     }
-    setCarrito(prev => {
-      const idx = prev.findIndex(i => i.id === item.id && i.tipo === tipo);
-      if (idx >= 0) {
-        if (tipo === 'promocion') {
-          addToast('La promocion ya esta en el carrito', 'info');
-          return prev;
-        }
-        const nuevo = [...prev];
-        nuevo[idx] = { ...nuevo[idx], cantidad: nuevo[idx].cantidad + 1 };
-        return nuevo;
+    if (tipo === 'combo') {
+      const faltante = comboProductoFaltante(item);
+      if (faltante) {
+        addToast(`"${faltante}" no tiene stock suficiente para el combo`, 'error');
+        return;
       }
-      return [...prev, { ...item, tipo, cantidad: 1 }];
-    });
+    }
+
+    const idx = carrito.findIndex(i => i.id === item.id && i.tipo === tipo);
+    if (idx >= 0) {
+      if (tipo === 'promocion') {
+        addToast('La promocion ya esta en el carrito', 'info');
+        return;
+      }
+      if (tipo === 'producto' && item.stock !== undefined && (carrito[idx].cantidad + 1) > Number(item.stock)) {
+        addToast('No puedes excederte del stock actual', 'error');
+        return;
+      }
+      if (tipo === 'combo') {
+        const nuevaCantidad = carrito[idx].cantidad + 1;
+        const faltante = comboProductoFaltante(item, nuevaCantidad);
+        if (faltante) {
+          addToast(`Stock insuficiente para ${nuevaCantidad} combo(s): falta "${faltante}"`, 'error');
+          return;
+        }
+      }
+      const nuevo = [...carrito];
+      nuevo[idx] = { ...nuevo[idx], cantidad: nuevo[idx].cantidad + 1 };
+      setCarrito(nuevo);
+      return;
+    }
+
+    if (tipo === 'promocion') {
+      const descuento = calcularDescuentoPromocion(item, carrito);
+      if (descuento <= 0) {
+        addToast('No hay productos elegibles para esta promoción', 'info');
+        return;
+      }
+      addToast(`Promoción aplicada: $${descuento.toFixed(2)} de descuento`, 'success');
+      setCarrito([...carrito, { ...item, tipo, cantidad: 1, precio: 0, precio_final: 0, descuento }]);
+      return;
+    }
+
+    setCarrito(agregarAutoPromos([...carrito, { ...item, tipo, cantidad: 1 }], tipo === 'producto'));
   };
 
   const cambiarCantidad = (idx, delta) => {
-    setCarrito(prev => {
-      const nuevo = [...prev];
-      if (nuevo[idx]?.tipo === 'promocion') {
-        if (delta < 0) return prev.filter((_, i) => i !== idx);
-        return prev;
+    const item = carrito[idx];
+    if (!item) return;
+
+    if (item.tipo === 'promocion') {
+      if (delta < 0) setCarrito(prev => prev.filter((_, i) => i !== idx));
+      return;
+    }
+
+    const val = (item.cantidad || 1) + delta;
+    if (val <= 0) {
+      setCarrito(prev => prev.filter((_, i) => i !== idx));
+      return;
+    }
+
+    if (delta > 0 && item.stock !== undefined && val > Number(item.stock)) {
+      addToast('No puedes excederte del stock actual', 'error');
+      return;
+    }
+
+    if (delta > 0 && item.tipo === 'combo') {
+      const faltante = comboProductoFaltante(item, val);
+      if (faltante) {
+        addToast(`Stock insuficiente para ${val} combo(s): falta "${faltante}"`, 'error');
+        return;
       }
-      const val = (nuevo[idx].cantidad || 1) + delta;
-      if (val <= 0) return prev.filter((_, i) => i !== idx);
-      nuevo[idx] = { ...nuevo[idx], cantidad: val };
-      return nuevo;
-    });
+    }
+
+    const nuevo = [...carrito];
+    nuevo[idx] = { ...nuevo[idx], cantidad: val };
+    setCarrito(nuevo);
   };
 
   const quitarDelCarrito = (idx) => {
@@ -236,6 +371,14 @@ export default function Caja() {
     if (tipoPedido === 'en_mesa' && !mesaId) return;
     setSubmitting(true);
     try {
+      const promocionesAplicadas = carrito
+        .filter(i => i.tipo === 'promocion')
+        .map(i => ({
+          promocion_id: i.id,
+          monto: i.descuento || 0,
+          nombre: i.nombre,
+        }));
+
       const body = {
         items: carrito.map(i => ({
           id: i.id,
@@ -245,6 +388,7 @@ export default function Caja() {
           descuento: i.descuento || 0,
           cantidad: i.cantidad,
         })),
+        promociones_aplicadas: promocionesAplicadas.length > 0 ? promocionesAplicadas : undefined,
         tipo: tipoPedido,
         mesa_id: mesaId || null,
         cliente_nombre: clienteNombre || null,
@@ -290,8 +434,10 @@ export default function Caja() {
             bloqueo_iniciado_en: data.bloqueo_iniciado_en,
           } : p)
         );
+      } else if (data?.error && err.response?.status && err.response.status < 500) {
+        addToast(data.error, 'error');
       } else {
-        addToast(data?.error || 'Error al iniciar cobro', 'error');
+        console.warn('Error al iniciar cobro (no crítico):', err.response?.status, data?.error || '', err);
       }
     } finally {
       setBloqueandoCobro(null);
@@ -469,7 +615,14 @@ export default function Caja() {
   };
 
   const renderItem = (item, tipo) => {
-    const sinStock = tipo === 'producto' && item.stock !== undefined && Number(item.stock) <= 0;
+    let sinStock = false;
+    let stockBajo = false;
+    if (tipo === 'producto') {
+      sinStock = item.stock !== undefined && Number(item.stock) <= 0;
+      stockBajo = item.stock !== undefined && Number(item.stock) <= Number(item.stock_minimo) && Number(item.stock) > 0;
+    } else if (tipo === 'combo') {
+      sinStock = comboProductoFaltante(item) !== null;
+    }
     return (
       <div
         key={`${tipo}-${item.id}`}
@@ -483,20 +636,29 @@ export default function Caja() {
         )}
         <div className="pos-product-header">
           <span className="pos-product-name">{item.nombre}</span>
-          {item.stock !== undefined && Number(item.stock) <= Number(item.stock_minimo) && (
-            <span className={`pos-stock-badge ${Number(item.stock) <= 0 ? 'pos-stock-badge--out' : 'pos-stock-badge--low'}`}>
-              {Number(item.stock) <= 0 ? 'Sin stock' : 'Stock bajo'}
+          {(sinStock || stockBajo) && (
+            <span className={`pos-stock-badge ${sinStock ? 'pos-stock-badge--out' : 'pos-stock-badge--low'}`}>
+              {sinStock ? 'Sin stock' : 'Stock bajo'}
             </span>
           )}
         </div>
-        {item.descripcion && (
-          <span className="pos-product-desc">{item.descripcion}</span>
-        )}
+        {item.descripcion && (() => {
+          const descKey = `${tipo}-${item.id}`;
+          return (
+            <span
+              className={`pos-product-desc${descExpandida === descKey ? ' expanded' : ''}`}
+              title={item.descripcion}
+              onClick={(e) => { e.stopPropagation(); setDescExpandida(prev => prev === descKey ? null : descKey); }}
+            >
+              {item.descripcion}
+            </span>
+          );
+        })()}
         <div className="pos-product-footer">
           <span className="pos-product-price">
             ${Number(item.precio).toFixed(2)}
           </span>
-          {item.stock !== undefined && Number(item.stock) > Number(item.stock_minimo) && (
+          {tipo === 'producto' && item.stock !== undefined && Number(item.stock) > Number(item.stock_minimo) && (
             <span className="pos-stock-count">{item.stock} uds</span>
           )}
         </div>
@@ -507,6 +669,8 @@ export default function Caja() {
   const renderPromo = (promo) => {
     const info = TIPOS_PROMO[promo.tipo] || { label: promo.tipo, icon: PartyPopper, tone: 'neutral' };
     const IconComp = info.icon;
+    const descText = promo.valor && (promo.tipo === 'descuento_porcentaje' || promo.tipo === 'happy_hour')
+      ? ` - ${promo.valor}% OFF` : '';
     return (
       <div
         key={`promo-${promo.id}`}
@@ -517,10 +681,10 @@ export default function Caja() {
           <IconComp size={18} /> {promo.nombre}
         </span>
         <span className="pos-promo-desc">
-          {info.label}{promo.descuento_porcentaje ? ` - ${promo.descuento_porcentaje}% OFF` : ''}
+          {info.label}{descText}
         </span>
         <span className="pos-promo-price">
-          ${Number(promo.precio_final || promo.precio || 0).toFixed(2)}
+          {info.label}
         </span>
       </div>
     );
@@ -657,7 +821,7 @@ export default function Caja() {
               <span className="pos-cart-title">
                 Carrito ({carrito.reduce((s, i) => s + i.cantidad, 0)} items)
               </span>
-              <span className="pos-cart-total">${total.toFixed(2)}</span>
+              <span className="pos-cart-total">${totalConIva.toFixed(2)}</span>
             </div>
             <div className="pos-cart-items">
               {carrito.length === 0 && (
@@ -687,8 +851,28 @@ export default function Caja() {
                 </div>
               ))}
             </div>
+            <div className="pos-cart-totals">
+              <div className="pos-totals-row">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              {descuentoTotal > 0 && (
+                <div className="pos-totals-row pos-totals-row--discount">
+                  <span>Descuentos</span>
+                  <span>-${descuentoTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="pos-totals-row">
+                <span>IVA 13%</span>
+                <span>${iva.toFixed(2)}</span>
+              </div>
+              <div className="pos-totals-row pos-totals-row--total">
+                <span>Total</span>
+                <span>${totalConIva.toFixed(2)}</span>
+              </div>
+            </div>
             <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido &mdash; ${total.toFixed(2)}
+              Procesar Pedido &mdash; ${totalConIva.toFixed(2)}
             </button>
           </aside>
         </div>
@@ -699,7 +883,7 @@ export default function Caja() {
           aria-label="Ver carrito"
         >
           <ShoppingBag size={22} />
-          <span>${total.toFixed(2)}</span>
+          <span>${totalConIva.toFixed(2)}</span>
         </button>
 
         <div className={`pos-bottom-sheet${cartOpen ? ' open' : ''}`}>
@@ -741,8 +925,28 @@ export default function Caja() {
                 </div>
               ))}
             </div>
+            <div className="pos-cart-totals">
+              <div className="pos-totals-row">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              {descuentoTotal > 0 && (
+                <div className="pos-totals-row pos-totals-row--discount">
+                  <span>Descuentos</span>
+                  <span>-${descuentoTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="pos-totals-row">
+                <span>IVA 13%</span>
+                <span>${iva.toFixed(2)}</span>
+              </div>
+              <div className="pos-totals-row pos-totals-row--total">
+                <span>Total</span>
+                <span>${totalConIva.toFixed(2)}</span>
+              </div>
+            </div>
             <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido &mdash; ${total.toFixed(2)}
+              Procesar Pedido &mdash; ${totalConIva.toFixed(2)}
             </button>
           </div>
         </div>
@@ -823,9 +1027,13 @@ export default function Caja() {
                     <span>-${descuentoTotal.toFixed(2)}</span>
                   </div>
                 )}
+                <div className="pos-totals-row">
+                  <span>IVA 13%</span>
+                  <span>${iva.toFixed(2)}</span>
+                </div>
                 <div className="pos-totals-row pos-totals-row--total">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>Total con IVA</span>
+                  <span>${totalConIva.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -880,17 +1088,26 @@ export default function Caja() {
                 })}
               </div>
 
-              <label className="pos-label">Propina</label>
-              <div className="pos-selection-grid pos-selection-grid--tips">
-                {[0, 0.50, 1.00, 2.00].map(tip => (
-                  <button
-                    key={tip}
-                    className={`pos-selection-tile${propina === tip ? ' active' : ''}`}
-                    onClick={() => setPropina(tip)}
-                  >
-                    {tip === 0 ? 'Sin propina' : `$${tip.toFixed(2)}`}
-                  </button>
-                ))}
+              <label className="pos-label">Propina (voluntaria)</label>
+              <div className="pos-tip-group">
+                <button
+                  className={`pos-tip-btn${propina === 0 ? ' active' : ''}`}
+                  onClick={() => setPropina(0)}
+                >
+                  Sin propina
+                </button>
+                <div className="pos-tip-input-wrap">
+                  <span className="pos-tip-currency">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={propina || ''}
+                    onChange={e => setPropina(Number(e.target.value) || 0)}
+                    className="pos-input"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
               {metodoPago === 'efectivo' && (

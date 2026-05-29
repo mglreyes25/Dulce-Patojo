@@ -36,16 +36,29 @@ exports.obtenerVentasPorPeriodo = async (req, res) => {
     const { periodo, fecha_inicio, fecha_fin } = req.query;
     const { start, end } = getPeriodoFilter(periodo, fecha_inicio, fecha_fin);
 
-    const { data: pedidos, error } = await supabase
-      .from('pedidos')
-      .select('id, total, total_con_iva, creado_en, subtotal')
-      .eq('estado', 'pagado')
-      .gte('creado_en', start)
-      .lte('creado_en', end)
-      .order('creado_en', { ascending: true });
+    let pedidos;
+    let queryError;
+    const colSets = [
+      'id, total, total_con_iva, creado_en, subtotal',
+      'id, total, creado_en, subtotal',
+    ];
+    for (const cols of colSets) {
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select(cols)
+        .eq('estado', 'pagado')
+        .gte('creado_en', start)
+        .lte('creado_en', end)
+        .order('creado_en', { ascending: true });
+      if (!error) { pedidos = data; break; }
+      queryError = error;
+    }
+    if (!pedidos) {
+      console.error('Supabase error en pedidos tras fallback:', queryError);
+      throw queryError;
+    }
 
-    if (error) throw error;
-
+    console.log(`📊 Ventas: ${pedidos.length} pedidos encontrados en rango`);
     const total_ventas = pedidos.reduce((sum, p) => sum + Number(p.total_con_iva || p.total || 0), 0);
     const total_pedidos = pedidos.length;
     const ticket_promedio = total_pedidos > 0 ? total_ventas / total_pedidos : 0;
@@ -74,28 +87,71 @@ exports.obtenerVentasPorPeriodo = async (req, res) => {
 
 exports.obtenerProductosMasVendidos = async (req, res) => {
   try {
-    const { periodo, limite = 5 } = req.query;
-    const { start, end } = getPeriodoFilter(periodo || 'semana');
+    const { periodo, limite = 5, fecha_inicio, fecha_fin } = req.query;
+    const { start, end } = getPeriodoFilter(periodo || 'semana', fecha_inicio, fecha_fin);
 
-    const { data: detalle, error } = await supabase
-      .from('pedido_items')
-      .select('producto_id, cantidad, precio_unitario, pedido_id, pedidos!inner(creado_en, estado)')
-      .gte('pedidos.creado_en', start)
-      .lte('pedidos.creado_en', end)
-      .eq('pedidos.estado', 'pagado');
-
-    if (error) throw error;
-
-    const agrupado = {};
-    for (const d of detalle || []) {
-      if (!agrupado[d.producto_id]) {
-        agrupado[d.producto_id] = { producto_id: d.producto_id, cantidad_total: 0, total_vendido: 0 };
-      }
-      agrupado[d.producto_id].cantidad_total += Number(d.cantidad) || 0;
-      agrupado[d.producto_id].total_vendido += (Number(d.cantidad) || 0) * (Number(d.precio_unitario) || 0);
+    let detalle;
+    let detalleError;
+    const prodQueries = [
+      () => supabase
+        .from('pedido_items')
+        .select('producto_id, cantidad, precio_unitario')
+        .not('producto_id', 'is', null)
+        .gte('creado_en', start)
+        .lte('creado_en', end),
+      () => supabase
+        .from('pedido_items')
+        .select('producto_id, cantidad, precio_unitario')
+        .not('producto_id', 'is', null)
+        .gte('creado_en', start)
+        .lte('creado_en', end),
+    ];
+    for (const q of prodQueries) {
+      const { data, error } = await q();
+      if (!error) { detalle = data; break; }
+      detalleError = error;
     }
 
-    const productosIds = Object.keys(agrupado);
+    const pedidosEnRango = await supabase
+      .from('pedidos')
+      .select('id')
+      .eq('estado', 'pagado')
+      .gte('creado_en', start)
+      .lte('creado_en', end);
+
+    if (!pedidosEnRango.error && pedidosEnRango.data) {
+      const pedidosIds = pedidosEnRango.data.map(p => p.id);
+      if (pedidosIds.length > 0) {
+        const { data, error } = await supabase
+          .from('pedido_items')
+          .select('producto_id, cantidad, precio_unitario')
+          .not('producto_id', 'is', null)
+          .in('pedido_id', pedidosIds);
+        if (!error) detalle = data;
+      } else {
+        detalle = [];
+      }
+    }
+
+    if (!detalle) {
+      if (detalleError) console.error('Supabase error en pedido_items:', detalleError);
+      return res.json([]);
+    }
+
+    const agrupado = {};
+    for (const d of detalle) {
+      const pid = d.producto_id;
+      if (pid == null) continue;
+      if (!agrupado[pid]) {
+        agrupado[pid] = { producto_id: pid, cantidad_total: 0, total_vendido: 0 };
+      }
+      agrupado[pid].cantidad_total += Number(d.cantidad) || 0;
+      agrupado[pid].total_vendido += (Number(d.cantidad) || 0) * (Number(d.precio_unitario) || 0);
+    }
+
+    const productosIds = Object.keys(agrupado).filter(k => k !== 'null' && k !== 'undefined');
+    if (productosIds.length === 0) return res.json([]);
+
     const { data: productos, error: prodError } = await supabase
       .from('productos')
       .select('id, nombre, imagen_url')
@@ -125,9 +181,14 @@ exports.obtenerProductosMasVendidos = async (req, res) => {
 
 exports.obtenerMovimientosInventario = async (req, res) => {
   try {
-    const { fecha_inicio, fecha_fin, tipo = 'todos' } = req.query;
-    const start = fecha_inicio ? new Date(fecha_inicio).toISOString() : new Date(0).toISOString();
-    const end = fecha_fin ? new Date(fecha_fin + 'T23:59:59').toISOString() : new Date().toISOString();
+    const { periodo, fecha_inicio, fecha_fin, tipo = 'todos' } = req.query;
+    let start, end;
+    if (periodo && periodo !== 'custom') {
+      ({ start, end } = getPeriodoFilter(periodo));
+    } else {
+      start = fecha_inicio ? new Date(fecha_inicio).toISOString() : new Date(0).toISOString();
+      end = fecha_fin ? new Date(fecha_fin + 'T23:59:59').toISOString() : new Date().toISOString();
+    }
 
     let query = supabase
       .from('inventario_movimientos')
@@ -166,17 +227,30 @@ exports.obtenerMovimientosInventario = async (req, res) => {
 
 exports.obtenerResumenCaja = async (req, res) => {
   try {
-    const { periodo } = req.query;
-    const { start, end } = getPeriodoFilter(periodo || 'hoy');
+    const { periodo, fecha_inicio, fecha_fin } = req.query;
+    const { start, end } = getPeriodoFilter(periodo || 'hoy', fecha_inicio, fecha_fin);
 
-    const { data: pagos, error } = await supabase
-      .from('pagos')
-      .select('id, total, metodo, creado_en, pedido_id')
-      .gte('creado_en', start)
-      .lte('creado_en', end)
-      .order('creado_en', { ascending: false });
-
-    if (error) throw error;
+    let pagos;
+    let pagosError;
+    const cajaCols = [
+      'id, total, metodo, creado_en, pedido_id',
+      'id, total, metodo, creado_en',
+      'id, total, metodo',
+    ];
+    for (const cols of cajaCols) {
+      const { data, error } = await supabase
+        .from('pagos')
+        .select(cols)
+        .gte('creado_en', start)
+        .lte('creado_en', end)
+        .order('creado_en', { ascending: false });
+      if (!error) { pagos = data; break; }
+      pagosError = error;
+    }
+    if (!pagos) {
+      console.error('Supabase error en pagos tras fallback:', pagosError);
+      throw pagosError;
+    }
 
     const total_ingresos = (pagos || []).reduce((s, p) => s + Number(p.total || 0), 0);
     const total_egresos = 0;

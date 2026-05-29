@@ -113,7 +113,7 @@ function Dashboard() {
               <div className="stat-card-value">
                 {loading ? '—' : `$${(stats?.ventas_totales ?? 0).toFixed(2)}`}
               </div>
-              <div className="stat-card-label">Ventas Totales</div>
+              <div className="stat-card-label">Ventas totales de hoy</div>
             </div>
           )}
           <div className="stat-card">

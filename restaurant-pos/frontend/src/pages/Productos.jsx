@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { X } from 'lucide-react';
+import { X, Pencil, Lock, Check, History, Undo2, Trash2 } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
 import API from '../utils/api';
+import ActionButton from '../components/ActionButton';
 
 /* ─────────────────────────────────────────────────────────────────
    Helper: sube el archivo al backend y devuelve la URL pública
@@ -513,36 +514,17 @@ export default function Productos() {
                           </span>
                         </td>
                         {usuario.rol === 'Admin' && (
-                          <td>
-                            <button className="btn-small btn-edit" onClick={() => abrirEditar(p)}>✏️ Editar</button>
-                            <button
-                              className={`btn-small ${p.disponible ? 'btn-delete' : 'btn-success'}`}
+                          <td className="td-actions">
+                            <ActionButton icon={Pencil} variant="edit" label="Editar" onClick={() => abrirEditar(p)} />
+                            <ActionButton
+                              icon={p.disponible ? Lock : Check}
+                              variant={p.disponible ? 'delete' : 'success'}
+                              label={p.disponible ? 'Ocultar' : 'Mostrar'}
                               onClick={() => toggleProducto(p)}
-                            >
-                              {p.disponible ? '🔒 Ocultar' : '✅ Mostrar'}
-                            </button>
-                            <button
-                              className="btn-small"
-                              style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                              onClick={() => verHistorial(p)}
-                            >
-                              📋 Historial
-                            
-                            </button>
-                            <button
-                              className="btn-small"
-                              style={{ background: 'rgba(241,196,15,0.1)', color: '#f1c40f', border: '1px solid rgba(241,196,15,0.3)' }}
-                              onClick={() => revertirPrecio(p)}
-                            >
-                              ↩ Revertir
-                            </button>
-                            <button
-                              className="btn-small"
-                              style={{ background: 'var(--red-bg)', color: '#e74c3c', border: '1px solid rgba(192,57,43,0.3)' }}
-                              onClick={() => { setEliminarTarget(p); setShowEliminarModal(true); }}
-                            >
-                              �️ Eliminar
-                            </button>
+                            />
+                            <ActionButton icon={History} variant="secondary" label="Historial" onClick={() => verHistorial(p)} />
+                            <ActionButton icon={Undo2} variant="warning" label="Revertir" onClick={() => revertirPrecio(p)} />
+                            <ActionButton icon={Trash2} variant="danger" label="Eliminar" onClick={() => { setEliminarTarget(p); setShowEliminarModal(true); }} />
                           </td>
                         )}
                       </tr>
@@ -711,116 +693,135 @@ export default function Productos() {
       {showComboModal && (
         <div className="modal-overlay" onClick={() => setShowComboModal(false)}>
           <div
-            className="modal modal-wide"
+            className="modal modal-wide modal-combo"
             onClick={e => e.stopPropagation()}
-            style={{ maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <h3>{editandoCombo ? 'Editar Combo' : 'Nuevo Combo'}</h3>
-            {error && <div className="message error-message">{error}</div>}
-
-            <ImagenPicker
-              valor={comboImagenPreview}
-              onChange={(file, preview) => { setComboImagenFile(file); setComboImagenPreview(preview); }}
-            />
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label>Nombre *</label>
-                <input
-                  value={comboForm.nombre}
-                  onChange={e => setComboForm({ ...comboForm, nombre: e.target.value })}
-                  placeholder="Nombre del combo"
-                />
-              </div>
-              <div className="form-group">
-                <label>Precio del Combo ($) *</label>
-                <input
-                  type="number" step="0.01" min="0.01"
-                  value={comboForm.precio}
-                  onChange={e => setComboForm({ ...comboForm, precio: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
+            <div className="modal-header">
+              <span className="modal-title">
+                {editandoCombo ? 'Editar Combo' : 'Nuevo Combo'}
+              </span>
+              <button className="modal-close-btn" onClick={() => setShowComboModal(false)}>
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="form-group">
-              <label>Descripción</label>
-              <input
-                value={comboForm.descripcion}
-                onChange={e => setComboForm({ ...comboForm, descripcion: e.target.value })}
-                placeholder="Descripción del combo"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Agregar Producto al Combo</label>
-              <select onChange={e => { if (e.target.value) { agregarItemCombo(e.target.value); e.target.value = ''; } }}>
-                <option value="">-- Seleccionar producto --</option>
-                {productos
-                  .filter(p => p.disponible && !comboForm.items.find(i => i.producto_id === p.id))
-                  .map(p => (
-                    <option key={p.id} value={p.id}>{p.nombre} — ${Number(p.precio).toFixed(2)}</option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="combo-items-list">
-              {comboForm.items.length === 0 ? (
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '12px' }}>
-                  Agrega al menos 2 productos
-                </p>
-              ) : (
-                comboForm.items.map(item => (
-                  <div key={item.producto_id} className="combo-item-row">
-                    <span>{item.nombre}</span>
-                    <span style={{ color: 'var(--gold-light)' }}>${Number(item.precio).toFixed(2)}</span>
-                    <input
-                      type="number" min="1" value={item.cantidad}
-                      onChange={e => setComboForm({
-                        ...comboForm,
-                        items: comboForm.items.map(i =>
-                          i.producto_id === item.producto_id ? { ...i, cantidad: Number(e.target.value) } : i
-                        )
-                      })}
-                      style={{
-                        width: '60px', padding: '4px 8px', borderRadius: '6px',
-                        border: '1px solid var(--border)', background: 'var(--surface)',
-                        color: 'var(--text)', textAlign: 'center'
-                      }}
-                    />
-                    <button className="btn-small btn-delete" onClick={() => quitarItemCombo(item.producto_id)}>✕</button>
-                  </div>
-                ))
-              )}
-              {comboForm.items.length > 0 && (
-                <div className="combo-suma">
-                  <span>
-                    Suma de productos:{' '}
-                    <strong style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>
-                      ${sumaCombo.toFixed(2)}
-                    </strong>
-                  </span>
-                  {comboForm.precio && (
-                    <span>
-                      Precio combo:{' '}
-                      <strong style={{ color: 'var(--gold-light)' }}>
-                        ${Number(comboForm.precio).toFixed(2)}
-                      </strong>
-                    </span>
-                  )}
+            <div className="modal-body">
+              {error && (
+                <div className="message error-message" style={{ marginBottom: '20px' }}>
+                  {error}
                 </div>
               )}
+
+              <ImagenPicker
+                valor={comboImagenPreview}
+                onChange={(file, preview) => { setComboImagenFile(file); setComboImagenPreview(preview); }}
+              />
+
+              <div className="combo-section">
+                <div className="modal-section-title">Información del Combo</div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Nombre *</label>
+                    <input
+                      value={comboForm.nombre}
+                      onChange={e => setComboForm({ ...comboForm, nombre: e.target.value })}
+                      placeholder="Nombre del combo"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Precio del Combo ($) *</label>
+                    <input
+                      type="number" step="0.01" min="0.01"
+                      value={comboForm.precio}
+                      onChange={e => setComboForm({ ...comboForm, precio: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginTop: '16px' }}>
+                  <label>Descripción</label>
+                  <input
+                    value={comboForm.descripcion}
+                    onChange={e => setComboForm({ ...comboForm, descripcion: e.target.value })}
+                    placeholder="Descripción del combo"
+                  />
+                </div>
+              </div>
+
+              <div className="combo-section">
+                <div className="modal-section-title">Productos del Combo</div>
+                <div className="form-group">
+                  <label>Agregar Producto</label>
+                  <select onChange={e => { if (e.target.value) { agregarItemCombo(e.target.value); e.target.value = ''; } }}>
+                    <option value="">-- Seleccionar producto --</option>
+                    {productos
+                      .filter(p => p.disponible && !comboForm.items.find(i => i.producto_id === p.id))
+                      .map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre} — ${Number(p.precio).toFixed(2)}</option>
+                      ))}
+                  </select>
+                </div>
+
+                <div className="combo-items-list">
+                  {comboForm.items.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '16px' }}>
+                      Agrega al menos 2 productos al combo
+                    </p>
+                  ) : (
+                    comboForm.items.map(item => (
+                      <div key={item.producto_id} className="combo-item-row">
+                        <span>{item.nombre}</span>
+                        <span style={{ color: 'var(--gold-light)' }}>${Number(item.precio).toFixed(2)}</span>
+                        <input
+                          type="number" min="1" value={item.cantidad}
+                          onChange={e => setComboForm({
+                            ...comboForm,
+                            items: comboForm.items.map(i =>
+                              i.producto_id === item.producto_id ? { ...i, cantidad: Number(e.target.value) } : i
+                            )
+                          })}
+                          style={{
+                            width: '60px', padding: '4px 8px', borderRadius: '6px',
+                            border: '1px solid var(--border)', background: 'var(--surface)',
+                            color: 'var(--text)', textAlign: 'center'
+                          }}
+                          title="Cantidad"
+                        />
+                        <button className="btn-small btn-delete" onClick={() => quitarItemCombo(item.producto_id)}>✕</button>
+                      </div>
+                    ))
+                  )}
+                  {comboForm.items.length > 0 && (
+                    <div className="combo-suma">
+                      <span>
+                        Suma de productos:{' '}
+                        <strong style={{ color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                          ${sumaCombo.toFixed(2)}
+                        </strong>
+                      </span>
+                      {comboForm.precio && (
+                        <span>
+                          Precio combo:{' '}
+                          <strong style={{ color: 'var(--gold-light)' }}>
+                            ${Number(comboForm.precio).toFixed(2)}
+                          </strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <div className="modal-footer">
               <button
                 className="btn"
-                style={{ flex: 1, background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
+                style={{ background: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
                 onClick={() => setShowComboModal(false)}
               >Cancelar</button>
               <button
                 className="btn btn-primary"
-                style={{ flex: 1 }}
                 onClick={guardarCombo}
                 disabled={guardando}
               >
