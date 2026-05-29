@@ -28,6 +28,21 @@ app.set('trust proxy', true);
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 
+const distPath = path.join(__dirname, '../../frontend/dist');
+
+// Static files (JS, CSS, imágenes)
+app.use(express.static(distPath));
+
+// SPA: servir index.html solo para navegaciones del navegador
+// (GET donde el cliente prefiera HTML sobre JSON)
+app.use((req, res, next) => {
+  if (req.method === 'GET' && req.accepts(['json', 'html']) === 'html') {
+    return res.sendFile(path.join(distPath, 'index.html'));
+  }
+  next();
+});
+
+// Rutas API
 app.use('/auth',        authRoutes);
 app.use('/usuarios',    usuariosRoutes);
 app.use('/productos',   productosRoutes);
@@ -42,10 +57,9 @@ app.use('/pagos',         pagosRoutes);
 app.use('/api/caja',      cajaRoutes);
 app.use('/api/reportes',  reportesRoutes);
 
-const distPath = path.join(__dirname, '../../frontend/dist');
-app.use(express.static(distPath));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+// Catch-all 404 para cualquier ruta no contemplada
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
 const server = http.createServer(app);
