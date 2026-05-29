@@ -1,4 +1,6 @@
-﻿const http = require('http');
+﻿process.env.TZ = 'America/El_Salvador';
+
+const http = require('http');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
