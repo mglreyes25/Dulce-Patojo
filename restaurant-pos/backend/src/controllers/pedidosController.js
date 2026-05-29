@@ -708,7 +708,8 @@ const probarMesa = async (req, res) => {
 // ── RESUMEN PARA DASHBOARD ──────────────────────────────────────
 const obtenerResumen = async (req, res) => {
   try {
-    const hoy = new Date().toISOString().split('T')[0];
+    const ahora = new Date();
+    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).toISOString();
 
     const { count: pedidosHoy } = await supabase
       .from('pedidos')

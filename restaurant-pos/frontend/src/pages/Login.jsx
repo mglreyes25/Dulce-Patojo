@@ -45,7 +45,7 @@ function Login() {
     <div className="auth-page">
       <div className="auth-left">
         <div className="auth-left-content">
-          <img src="/images/logo.jpg" alt="Dulce Patojo" className="auth-logo" />
+          <img src="/images/logo.jpg" alt="Dulce Patojo" className="auth-logo" loading="lazy" />
           <h1 className="auth-brand">Dulce Patojo</h1>
           <p className="auth-tagline">
             Sistema Administrativo y Contable para tu cafetería.
@@ -78,6 +78,8 @@ function Login() {
                 placeholder="correo@ejemplo.com"
                 disabled={loading}
                 required
+                autoComplete="email"
+                autoFocus
               />
             </div>
             <div className="form-group">

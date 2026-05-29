@@ -58,10 +58,10 @@ function Register() {
 
   return (
     <div className="auth-page">
-      <div className="auth-right" style={{ width: '100%', borderLeft: 'none' }}>
+      <div className="auth-right auth-right--full">
         <div className="auth-container">
-          <h2>Crear Cuenta</h2>
-          <p className="subtitle">Regístrate para comenzar</p>
+          <h2 className="auth-title">Crear Cuenta</h2>
+          <p className="page-subtitle">Regístrate para comenzar</p>
 
           {error   && <div className="message error-message">{error}</div>}
           {success && <div className="message success-message">{success}</div>}
@@ -140,7 +140,7 @@ function Register() {
             </button>
           </form>
 
-          <div className="auth-footer" style={{ marginTop: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+          <div className="auth-footer">
             ¿Ya tienes cuenta? <Link to="/login" style={{ color: 'var(--gold)' }}>Inicia sesión</Link>
           </div>
         </div>

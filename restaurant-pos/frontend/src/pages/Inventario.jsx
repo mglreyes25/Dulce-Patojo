@@ -167,17 +167,17 @@ export default function Inventario() {
         {error && <div className="message error-message">{error}</div>}
 
         {/* Stats rápidos */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-          <div className="stat-card" style={{ borderColor: 'var(--green)' }}>
-            <div className="stat-value" style={{ color: '#2ecc71' }}>{conStock}</div>
+        <div className="inventario-stats">
+          <div className="stat-card inventario-stat--con-stock">
+            <div className="stat-value inventario-value--green">{conStock}</div>
             <div className="stat-label">Con Stock</div>
           </div>
-          <div className="stat-card" style={{ borderColor: '#f1c40f' }}>
-            <div className="stat-value" style={{ color: '#f1c40f' }}>{bajoStock}</div>
+          <div className="stat-card inventario-stat--bajo">
+            <div className="stat-value inventario-value--yellow">{bajoStock}</div>
             <div className="stat-label">Stock Bajo</div>
           </div>
-          <div className="stat-card" style={{ borderColor: 'var(--red)' }}>
-            <div className="stat-value" style={{ color: '#e74c3c' }}>{sinStock}</div>
+          <div className="stat-card inventario-stat--sin">
+            <div className="stat-value inventario-value--red">{sinStock}</div>
             <div className="stat-label">Sin Stock</div>
           </div>
           <div className="stat-card">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { X, Pencil, Lock, Check, Trash2 } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
+import useSocket from '../hooks/useSocket';
 import { API_URL } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Pagination from '../components/Pagination';
@@ -42,6 +43,18 @@ function Usuarios() {
   const [eliminarTarget, setEliminarTarget]       = useState(null);
   const [eliminando, setEliminando]               = useState(false);
 
+  // Estado en línea (socket)
+  const [onlineIds, setOnlineIds]       = useState([]);
+  const { socket: socketRef } = useSocket();
+
+  useEffect(() => {
+    const s = socketRef.current;
+    if (!s) return;
+    const handler = (ids) => setOnlineIds(ids);
+    s.on('usuarios-online', handler);
+    return () => s.off('usuarios-online', handler);
+  }, [socketRef]);
+
   // Filtros
   const [busqueda, setBusqueda]         = useState('');
   const [filtroRol, setFiltroRol]       = useState('Todos');
@@ -72,7 +85,7 @@ function Usuarios() {
       setUsuarios(res.data || []);
     } catch (err) {
       if (err.response?.status === 401 || err.response?.status === 403) {
-        localStorage.clear(); navigate('/login');
+        localStorage.clear(); navigate('/sesion-expirada');
       }
       setError('Error al cargar usuarios');
     } finally {
@@ -91,7 +104,9 @@ function Usuarios() {
       const matchEstado =
         filtroEstado === 'Todos' ||
         (filtroEstado === 'Activo' && u.activo) ||
-        (filtroEstado === 'Inactivo' && !u.activo);
+        (filtroEstado === 'Inactivo' && !u.activo) ||
+        (filtroEstado === 'Online' && onlineIds.includes(u.id)) ||
+        (filtroEstado === 'Offline' && !onlineIds.includes(u.id));
       return matchBusqueda && matchRol && matchEstado;
     });
   }, [usuarios, busqueda, filtroRol, filtroEstado]);
@@ -262,6 +277,8 @@ function Usuarios() {
             <option value="Todos">Todos los estados</option>
             <option value="Activo">Activo</option>
             <option value="Inactivo">Inactivo</option>
+            <option value="Online">En línea</option>
+            <option value="Offline">Desconectado</option>
           </select>
           {(busqueda || filtroRol !== 'Todos' || filtroEstado !== 'Todos') && (
             <button
@@ -290,6 +307,7 @@ function Usuarios() {
               <table className="table">
                 <thead>
                   <tr>
+                    <th>En línea</th>
                     <th>Nombre</th>
                     <th>Correo</th>
                     <th>Rol</th>
@@ -300,6 +318,12 @@ function Usuarios() {
                 <tbody>
                   {paginados.map((u) => (
                     <tr key={u.id}>
+                      <td>
+                        <span
+                          className={`socket-indicator ${onlineIds.includes(u.id) ? 'connected' : 'disconnected'}`}
+                          title={onlineIds.includes(u.id) ? 'En línea' : 'Desconectado'}
+                        />
+                      </td>
                       <td><strong>{u.nombre}</strong></td>
                       <td style={{ color: 'var(--text-muted)' }}>{u.correo}</td>
                       <td>

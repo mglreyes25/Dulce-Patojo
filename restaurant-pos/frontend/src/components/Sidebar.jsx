@@ -18,7 +18,7 @@ const rolInitials = (nombre) => {
 const SidebarContent = ({ usuario, activeRoute, collapsed, navItems, handleLogout, onLinkClick, socketConnected }) => (
   <>
     <div className="sidebar-logo">
-      <img src="/images/logo.jpg" alt="Dulce Patojo" className="sidebar-logo-img" />
+      <img src="/images/logo.jpg" alt="Dulce Patojo" className="sidebar-logo-img" loading="lazy" />
       {!collapsed && <span className="sidebar-logo-text">Dulce Patojo</span>}
     </div>
 
@@ -105,9 +105,14 @@ export default function Sidebar({ usuario, activeRoute }) {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth > 768) setDrawerOpen(false);
-      if (window.innerWidth <= 1024 && window.innerWidth > 768) setCollapsed(true);
-      if (window.innerWidth > 1024) setCollapsed(false);
+      const w = window.innerWidth;
+      if (w > 1024) {
+        setCollapsed(false);
+        setDrawerOpen(false);
+      } else if (w > 768) {
+        setCollapsed(true);
+        setDrawerOpen(false);
+      }
     };
     handleResize();
     window.addEventListener('resize', handleResize);

@@ -100,35 +100,35 @@ function Dashboard() {
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-card-icon">
-              <Coffee size={20} style={{ color: 'var(--gold-light)' }} />
+              <Coffee size={20} className="stat-card-icon-svg" />
             </div>
-            <div className="stat-card-value">{loading ? '—' : stats?.pedidos_hoy ?? 0}</div>
+            <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.pedidos_hoy ?? 0}</div>
             <div className="stat-card-label">Pedidos Hoy</div>
           </div>
           {(usuario.rol === 'Admin' || usuario.rol === 'Cajero') && (
             <div className="stat-card">
               <div className="stat-card-icon">
-                <TrendingUp size={20} style={{ color: 'var(--gold-light)' }} />
+                <TrendingUp size={20} className="stat-card-icon-svg" />
               </div>
               <div className="stat-card-value">
-                {loading ? '—' : `$${(stats?.ventas_totales ?? 0).toFixed(2)}`}
+                {loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : `$${(stats?.ventas_totales ?? 0).toFixed(2)}`}
               </div>
               <div className="stat-card-label">Ventas totales de hoy</div>
             </div>
           )}
           <div className="stat-card">
             <div className="stat-card-icon">
-              <CakeSlice size={20} style={{ color: 'var(--gold-light)' }} />
+              <CakeSlice size={20} className="stat-card-icon-svg" />
             </div>
-            <div className="stat-card-value">{loading ? '—' : stats?.productos_activos ?? '—'}</div>
+            <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.productos_activos ?? '—'}</div>
             <div className="stat-card-label">Productos Activos</div>
           </div>
           {usuario.rol === 'Admin' && (
             <div className="stat-card">
               <div className="stat-card-icon">
-                <Users size={20} style={{ color: 'var(--gold-light)' }} />
+                <Users size={20} className="stat-card-icon-svg" />
               </div>
-              <div className="stat-card-value">{loading ? '—' : stats?.usuarios_activos ?? '—'}</div>
+              <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.usuarios_activos ?? '—'}</div>
               <div className="stat-card-label">Usuarios Activos</div>
             </div>
           )}

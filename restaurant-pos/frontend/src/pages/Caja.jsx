@@ -630,7 +630,7 @@ export default function Caja() {
         onClick={() => agregarAlCarrito(item, tipo)}
       >
         {item.imagen_url ? (
-          <img src={item.imagen_url} alt={item.nombre} className="pos-product-img" />
+          <img src={item.imagen_url} alt={item.nombre} className="pos-product-img" loading="lazy" />
         ) : (
           <div className="pos-product-img-placeholder" />
         )}
@@ -703,8 +703,30 @@ export default function Caja() {
     return (
       <div className="dashboard-page">
         <Sidebar usuario={usuario} activeRoute="caja" />
-        <main className="main-content pos-loading">
-          <p className="pos-loading-text">Cargando...</p>
+        <main className="main-content">
+          <div className="pos-header">
+            <div>
+              <span className="skeleton" style={{display:'inline-block', width:200, height:24, borderRadius:6}}>&nbsp;</span>
+            </div>
+          </div>
+          <div className="pos-tabs">
+            <span className="skeleton" style={{display:'inline-block', width:100, height:36, borderRadius:6}}>&nbsp;</span>
+            <span className="skeleton" style={{display:'inline-block', width:100, height:36, borderRadius:6}}>&nbsp;</span>
+            <span className="skeleton" style={{display:'inline-block', width:100, height:36, borderRadius:6}}>&nbsp;</span>
+          </div>
+          <div className="pos-search-bar">
+            <span className="skeleton" style={{flex:1, height:48, borderRadius:8}}>&nbsp;</span>
+            <span className="skeleton" style={{width:160, height:48, borderRadius:8}}>&nbsp;</span>
+          </div>
+          <div className="pos-grid" style={{padding:'0 24px'}}>
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="skeleton-card" style={{padding:12, gap:8}}>
+                <span className="skeleton skeleton-img">&nbsp;</span>
+                <span className="skeleton skeleton-line skeleton-line--md">&nbsp;</span>
+                <span className="skeleton skeleton-line skeleton-line--sm">&nbsp;</span>
+              </div>
+            ))}
+          </div>
         </main>
       </div>
     );
@@ -791,9 +813,10 @@ export default function Caja() {
               <input
                 type="text"
                 className="pos-search-input"
-                placeholder="Buscar..."
+                placeholder="Buscar productos..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
+                autoFocus
               />
               <select
                 className="pos-search-select"
@@ -815,96 +838,46 @@ export default function Caja() {
               </div>
             </div>
           </section>
-
-          <aside className="pos-cart" aria-live="polite">
-            <div className="pos-cart-header">
-              <span className="pos-cart-title">
-                Carrito ({carrito.reduce((s, i) => s + i.cantidad, 0)} items)
-              </span>
-              <span className="pos-cart-total">${totalConIva.toFixed(2)}</span>
-            </div>
-            <div className="pos-cart-items">
-              {carrito.length === 0 && (
-                <div className="pos-cart-empty">Agrega productos para iniciar el pedido.</div>
-              )}
-              {carrito.map((item, idx) => (
-                <div key={idx} className="pos-cart-item">
-                  {item.imagen_url ? (
-                    <img src={item.imagen_url} alt={item.nombre} className="pos-cart-item-img" />
-                  ) : (
-                    <div className="pos-cart-item-img-placeholder" />
-                  )}
-                  <div className="pos-cart-item-info">
-                    <span className="pos-cart-item-name">{item.nombre}</span>
-                    <span className="pos-cart-item-price">
-                      ${(Number(item.precio_final || item.precio || 0) * item.cantidad).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="pos-cart-qty">
-                    <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, -1)} aria-label="Restar">-</button>
-                    <span className="pos-qty-count">{item.cantidad}</span>
-                    <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, 1)} aria-label="Sumar">+</button>
-                    <button className="pos-qty-btn pos-qty-btn--remove" onClick={() => quitarDelCarrito(idx)} aria-label="Quitar">
-                      <X size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="pos-cart-totals">
-              <div className="pos-totals-row">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              {descuentoTotal > 0 && (
-                <div className="pos-totals-row pos-totals-row--discount">
-                  <span>Descuentos</span>
-                  <span>-${descuentoTotal.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="pos-totals-row">
-                <span>IVA 13%</span>
-                <span>${iva.toFixed(2)}</span>
-              </div>
-              <div className="pos-totals-row pos-totals-row--total">
-                <span>Total</span>
-                <span>${totalConIva.toFixed(2)}</span>
-              </div>
-            </div>
-            <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido &mdash; ${totalConIva.toFixed(2)}
-            </button>
-          </aside>
         </div>
 
-        <button
-          className="pos-cart-fab"
-          onClick={() => setCartOpen(true)}
-          aria-label="Ver carrito"
-        >
-          <ShoppingBag size={22} />
-          <span>${totalConIva.toFixed(2)}</span>
-        </button>
-
-        <div className={`pos-bottom-sheet${cartOpen ? ' open' : ''}`}>
-          <div className="pos-bottom-sheet-handle" onClick={() => setCartOpen(false)} />
-          <div className="pos-cart">
-            <div className="pos-cart-header">
-              <span className="pos-cart-title">
-                Carrito ({carrito.reduce((s, i) => s + i.cantidad, 0)} items)
-              </span>
-              <button className="pos-cart-close" onClick={() => setCartOpen(false)} aria-label="Cerrar">
-                <X size={20} />
-              </button>
+        {carrito.length > 0 && (
+          <div className="pos-cart-bar" onClick={() => setCartOpen(true)} role="button" tabIndex={0} aria-label="Abrir carrito">
+            <div className="pos-cart-bar-left">
+              <ShoppingBag size={18} />
+              <span className="pos-cart-bar-count">{carrito.reduce((s, i) => s + i.cantidad, 0)} items</span>
             </div>
-            <div className="pos-cart-items">
-              {carrito.length === 0 && (
-                <div className="pos-cart-empty">Agrega productos para iniciar el pedido.</div>
-              )}
-              {carrito.map((item, idx) => (
+            <div className="pos-cart-bar-right">
+              <span className="pos-cart-bar-total">${totalConIva.toFixed(2)}</span>
+              <span className="pos-cart-bar-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className={`pos-cart-drawer-overlay${cartOpen ? ' open' : ''}`} onClick={() => setCartOpen(false)} />
+
+        <div className={`pos-cart-drawer${cartOpen ? ' open' : ''}`} aria-live="polite">
+          <div className="pos-cart-drawer-header">
+            <span className="pos-cart-drawer-title">
+              Carrito ({carrito.reduce((s, i) => s + i.cantidad, 0)} items)
+            </span>
+            <button className="pos-cart-drawer-close" onClick={() => setCartOpen(false)} aria-label="Cerrar carrito">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="pos-cart-drawer-items">
+            {carrito.length === 0 ? (
+              <div className="pos-cart-empty">
+                <ShoppingBag size={40} style={{opacity:0.3, marginBottom:8}} />
+                <span>Agrega productos para iniciar el pedido</span>
+              </div>
+            ) : (
+              carrito.map((item, idx) => (
                 <div key={idx} className="pos-cart-item">
                   {item.imagen_url ? (
-                    <img src={item.imagen_url} alt={item.nombre} className="pos-cart-item-img" />
+                    <img src={item.imagen_url} alt={item.nombre} className="pos-cart-item-img" loading="lazy" />
                   ) : (
                     <div className="pos-cart-item-img-placeholder" />
                   )}
@@ -915,7 +888,7 @@ export default function Caja() {
                     </span>
                   </div>
                   <div className="pos-cart-qty">
-                    <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, -1)} aria-label="Restar">-</button>
+                    <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, -1)} aria-label="Restar">−</button>
                     <span className="pos-qty-count">{item.cantidad}</span>
                     <button className="pos-qty-btn" onClick={() => cambiarCantidad(idx, 1)} aria-label="Sumar">+</button>
                     <button className="pos-qty-btn pos-qty-btn--remove" onClick={() => quitarDelCarrito(idx)} aria-label="Quitar">
@@ -923,32 +896,37 @@ export default function Caja() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-            <div className="pos-cart-totals">
-              <div className="pos-totals-row">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              {descuentoTotal > 0 && (
-                <div className="pos-totals-row pos-totals-row--discount">
-                  <span>Descuentos</span>
-                  <span>-${descuentoTotal.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="pos-totals-row">
-                <span>IVA 13%</span>
-                <span>${iva.toFixed(2)}</span>
-              </div>
-              <div className="pos-totals-row pos-totals-row--total">
-                <span>Total</span>
-                <span>${totalConIva.toFixed(2)}</span>
-              </div>
-            </div>
-            <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
-              Procesar Pedido &mdash; ${totalConIva.toFixed(2)}
-            </button>
+              ))
+            )}
           </div>
+
+          {carrito.length > 0 && (
+            <div className="pos-cart-drawer-footer">
+              <div className="pos-totals">
+                <div className="pos-totals-row">
+                  <span>Subtotal</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                {descuentoTotal > 0 && (
+                  <div className="pos-totals-row pos-totals-row--discount">
+                    <span>Descuentos</span>
+                    <span>-${descuentoTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="pos-totals-row">
+                  <span>IVA 13%</span>
+                  <span>${iva.toFixed(2)}</span>
+                </div>
+                <div className="pos-totals-row pos-totals-row--total">
+                  <span>Total</span>
+                  <span>${totalConIva.toFixed(2)}</span>
+                </div>
+              </div>
+              <button className="pos-btn-process" onClick={abrirModalTipo} disabled={carrito.length === 0}>
+                Procesar Pedido &mdash; ${totalConIva.toFixed(2)}
+              </button>
+            </div>
+          )}
         </div>
 
         {modal === MODAL_TIPO && (

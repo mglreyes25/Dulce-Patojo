@@ -28,10 +28,10 @@ export default function useSocket(eventHandlers = {}) {
 
     const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
     if (socket.connected && usuario.rol) {
-      socket.emit('join', usuario.rol);
+      socket.emit('join', { rol: usuario.rol, userId: usuario.id });
     }
     socket.on('connect', () => {
-      if (usuario.rol) socket.emit('join', usuario.rol);
+      if (usuario.rol) socket.emit('join', { rol: usuario.rol, userId: usuario.id });
     });
 
     const boundHandlers = {};

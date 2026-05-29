@@ -454,7 +454,17 @@ export default function Productos() {
 
             <div className="card">
               {loading ? (
-                <p className="loading-text">Cargando productos...</p>
+                <div className="skeleton-card" style={{padding:16, border:'none'}}>
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} style={{display:'flex', alignItems:'center', gap:12, padding:'10px 0', borderBottom:'1px solid var(--border)'}}>
+                      <span className="skeleton" style={{width:52, height:52, borderRadius:8, flexShrink:0}}>&nbsp;</span>
+                      <div style={{flex:1, display:'flex', flexDirection:'column', gap:6}}>
+                        <span className="skeleton skeleton-line skeleton-line--md">&nbsp;</span>
+                        <span className="skeleton skeleton-line skeleton-line--sm">&nbsp;</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : productosFiltrados.length === 0 ? (
                 <div className="empty-state">
                   <p>{productos.length === 0 ? 'No hay productos registrados' : 'Sin resultados'}</p>
@@ -542,7 +552,19 @@ export default function Productos() {
         {tab === 'combos' && (
           <div className="combos-grid">
             {loading ? (
-              <p className="loading-text">Cargando combos...</p>
+              <div className="skeleton-grid" style={{gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))'}}>
+                {[1,2,3].map(i => (
+                  <div key={i} className="skeleton-card">
+                    <span className="skeleton skeleton-line skeleton-line--title">&nbsp;</span>
+                    <span className="skeleton skeleton-line skeleton-line--md">&nbsp;</span>
+                    <span className="skeleton skeleton-line skeleton-line--sm">&nbsp;</span>
+                    <div style={{display:'flex', justifyContent:'space-between', marginTop:8}}>
+                      <span className="skeleton" style={{width:80, height:24, borderRadius:6}}>&nbsp;</span>
+                      <span className="skeleton" style={{width:60, height:24, borderRadius:6}}>&nbsp;</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : combos.length === 0 ? (
               <div className="empty-state">
                 <p>No hay combos registrados</p>

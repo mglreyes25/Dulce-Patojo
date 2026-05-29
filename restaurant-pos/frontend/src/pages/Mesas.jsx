@@ -90,10 +90,7 @@ export default function Mesas() {
               >
                 <div className="mesa-card-numero">{mesa.numero}</div>
                 <div className={`mesa-card-estado mesa-card-estado--${mesa.estado || 'disponible'}`}>
-                  <span style={{
-                    width: 10, height: 10, borderRadius: '50%',
-                    background: estado.iconColor, display: 'inline-block',
-                  }} />
+                  <span className="mesa-estado-dot" style={{ background: estado.iconColor }} />
                   {estado.label}
                 </div>
                 <div className="mesa-card-capacidad">

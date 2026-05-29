@@ -2,6 +2,9 @@ const { Server } = require('socket.io');
 
 let io = null;
 
+const userSockets = {};
+const onlineUsers = new Set();
+
 function initSocket(server) {
   io = new Server(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -10,14 +13,30 @@ function initSocket(server) {
   io.on('connection', (socket) => {
     console.log(`🔌 Cliente conectado: ${socket.id}`);
 
-    // Unirse a sala según el rol (enviado desde el frontend al conectar)
-    socket.on('join', (rol) => {
+    socket.on('join', ({ rol, userId } = {}) => {
       if (rol) socket.join(rol);
-      console.log(`  → Unido a sala: ${rol}`);
+      if (userId) {
+        if (!userSockets[userId]) userSockets[userId] = new Set();
+        userSockets[userId].add(socket.id);
+        onlineUsers.add(userId);
+        io.emit('usuarios-online', [...onlineUsers]);
+      }
+      console.log(`  → Unido a sala: ${rol || 'sin rol'} (userId: ${userId || 'anon'})`);
     });
 
     socket.on('disconnect', () => {
       console.log(`🔌 Cliente desconectado: ${socket.id}`);
+      for (const [userId, sockets] of Object.entries(userSockets)) {
+        if (sockets.has(socket.id)) {
+          sockets.delete(socket.id);
+          if (sockets.size === 0) {
+            delete userSockets[userId];
+            onlineUsers.delete(userId);
+          }
+          io.emit('usuarios-online', [...onlineUsers]);
+          break;
+        }
+      }
     });
   });
 
@@ -29,4 +48,8 @@ function getIO() {
   return io;
 }
 
-module.exports = { initSocket, getIO };
+function getOnlineUsers() {
+  return [...onlineUsers];
+}
+
+module.exports = { initSocket, getIO, getOnlineUsers };

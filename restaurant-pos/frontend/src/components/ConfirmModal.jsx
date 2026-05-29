@@ -81,13 +81,13 @@ export default function ConfirmModal({
       aria-modal="true"
       aria-labelledby="modal-title"
     >
-      <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
         <div
           className="modal-header"
           style={config.headerBg ? { background: config.headerBg, borderBottom: '1px solid var(--border)', borderRadius: '14px 14px 0 0' } : undefined}
         >
           {IconComp && (
-            <div className="modal-header-icon" style={config.headerBg ? { background: config.headerBg } : undefined}>
+            <div className="modal-header-icon" style={config.headerBg ? { background: config.iconColor } : undefined}>
               <IconComp size={20} color={config.iconColor} />
             </div>
           )}

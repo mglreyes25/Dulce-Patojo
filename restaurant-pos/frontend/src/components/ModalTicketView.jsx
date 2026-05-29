@@ -92,13 +92,13 @@ export default function ModalTicketView({ pedido, onClose }) {
   return (
     <div className="pos-modal-overlay" onClick={onClose}>
       <div className="pos-ticket-modal" onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 800, fontFamily: "'Playfair Display', serif" }}>Dulce Patojo</h2>
+        <div className="pos-ticket-header-row">
+          <h2 className="pos-ticket-brand">Dulce Patojo</h2>
           <button className="pos-cart-close" onClick={onClose} aria-label="Cerrar">
             <X size={20} />
           </button>
         </div>
-        <p style={{ margin: '0 0 12px', fontSize: '11px', color: 'var(--text-muted)' }}>Sistema POS — Ticket de Venta</p>
+        <p className="pos-ticket-subtitle">Sistema POS — Ticket de Venta</p>
         <div className="pos-ticket-divider" />
         <p className="pos-ticket-number">#{String(pedido.numero_ticket).padStart(3, '0')}</p>
         <p className="pos-ticket-date">{new Date(pedido.creado_en).toLocaleString('es-SV')}</p>
@@ -111,7 +111,7 @@ export default function ModalTicketView({ pedido, onClose }) {
             </div>
           ))}
           {items.length === 0 && (
-            <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '12px' }}>Sin items</p>
+            <p className="pos-ticket-empty">Sin items</p>
           )}
         </div>
 

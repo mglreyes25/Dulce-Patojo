@@ -11,7 +11,7 @@ export function useInactividad(timeout = INACTIVIDAD_DEFAULT_MS, onTimeout) {
       onTimeout();
     } else {
       localStorage.clear();
-      navigate('/login');
+      navigate('/sesion-expirada');
     }
   }, [navigate, onTimeout]);
 
