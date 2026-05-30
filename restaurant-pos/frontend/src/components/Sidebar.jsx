@@ -5,7 +5,7 @@ import {
   PartyPopper, Coffee, Map, ChefHat, Rocket, TrendingUp, LogOut,
   Menu, X, Settings,
 } from 'lucide-react';
-import useSocket from '../hooks/useSocket';
+import useSocket, { disconnectSocket } from '../hooks/useSocket';
 
 const rolColor = (rol) =>
   ({ Admin: 'primary', Cajero: 'info', Cocinero: 'purple', Despachador: 'success' }[rol] || 'primary');
@@ -119,7 +119,7 @@ export default function Sidebar({ usuario, activeRoute }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleLogout = () => { localStorage.clear(); navigate('/login'); };
+  const handleLogout = () => { disconnectSocket(); localStorage.clear(); navigate('/login'); };
 
   const navItems = [
     { to: '/dashboard', icon: BarChart3, label: 'Dashboard', key: 'dashboard' },

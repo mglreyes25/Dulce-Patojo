@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { disconnectSocket } from './useSocket';
 
 const INACTIVIDAD_DEFAULT_MS = 30 * 60 * 1000; // 30 minutos
 
@@ -7,6 +8,7 @@ export function useInactividad(timeout = INACTIVIDAD_DEFAULT_MS, onTimeout) {
   const navigate = useNavigate();
 
   const cerrarSesion = useCallback(() => {
+    disconnectSocket();
     if (onTimeout) {
       onTimeout();
     } else {

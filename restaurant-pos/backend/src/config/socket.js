@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const { removeSession } = require('./sessionManager');
 
 let io = null;
 
@@ -25,6 +26,18 @@ function initSocket(server) {
         io.emit('usuarios-online', [...onlineUsers]);
       }
       console.log(`  → Unido a sala: ${rol || 'sin rol'} (userId: ${userId || 'anon'})`);
+    });
+
+    socket.on('force-logout', ({ userId } = {}) => {
+      console.log(`🚪 Logout forzado: userId ${userId}`);
+      if (userId) {
+        removeSession(userId);
+        if (userSockets[userId]) {
+          delete userSockets[userId];
+          onlineUsers.delete(userId);
+          io.emit('usuarios-online', [...onlineUsers]);
+        }
+      }
     });
 
     socket.on('disconnect', () => {

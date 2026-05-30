@@ -1,20 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import { SOCKET_URL } from '../utils/api';
+import { getSocket, disconnectSocket, incRef, decRef } from '../utils/socketClient';
 
-let sharedSocket = null;
-let socketRefCount = 0;
-
-function getSocket() {
-  if (!sharedSocket || !sharedSocket.connected) {
-    sharedSocket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
-  }
-  return sharedSocket;
-}
+export { disconnectSocket };
 
 export default function useSocket(eventHandlers = {}) {
   const socketRef = useRef(null);
@@ -22,7 +9,7 @@ export default function useSocket(eventHandlers = {}) {
   handlersRef.current = eventHandlers;
 
   useEffect(() => {
-    socketRefCount++;
+    incRef();
     const socket = getSocket();
     socketRef.current = socket;
 
@@ -45,7 +32,7 @@ export default function useSocket(eventHandlers = {}) {
       Object.entries(boundHandlers).forEach(([event, handler]) => {
         socket.off(event, handler);
       });
-      socketRefCount--;
+      decRef();
     };
   }, []);
 

@@ -1,6 +1,7 @@
 const supabase = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { hasActiveSession, addSession, removeSession } = require('../config/sessionManager');
 
 /* ──────────────────────────────────────────────────────────────────
    HELPER: parsear timestamps de Supabase como UTC.
@@ -86,6 +87,13 @@ const login = async (req, res) => {
       });
     }
 
+    // Verificar sesión única
+    if (hasActiveSession(usuario.id)) {
+      return res.status(403).json({
+        error: 'Ya hay una sesión activa para este usuario. Cierra sesión en el otro dispositivo primero.',
+      });
+    }
+
     // Login exitoso → limpiar intentos
     await supabase.from('intentos_login').delete().eq('correo', correo);
 
@@ -94,6 +102,8 @@ const login = async (req, res) => {
       process.env.JWT_SECRET || 'clave_secreta_temporal',
       { expiresIn: '30m' }
     );
+
+    addSession(usuario.id);
 
     await supabase.from('bitacora_permisos').insert({
       usuario_id: usuario.id, accion: 'LOGIN',
@@ -174,6 +184,7 @@ const registroPublico = async (req, res) => {
 const logout = async (req, res) => {
   try {
     if (req.user) {
+      removeSession(req.user.id);
       await supabase.from('bitacora_permisos').insert({
         usuario_id: req.user.id, accion: 'LOGOUT', descripcion: 'Cierre de sesión',
       });

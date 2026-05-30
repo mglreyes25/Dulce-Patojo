@@ -4,6 +4,7 @@ import { Moon, Sun, LogOut, User, Shield, Mail, Info } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useInactividad } from '../hooks/useInactividad';
 import Sidebar from '../components/Sidebar';
+import { disconnectSocket } from '../hooks/useSocket';
 
 function Configuracion() {
   const [usuario, setUsuario] = useState(null);
@@ -18,6 +19,7 @@ function Configuracion() {
   }, [navigate]);
 
   const handleLogout = () => {
+    disconnectSocket();
     localStorage.clear();
     navigate('/login');
   };
