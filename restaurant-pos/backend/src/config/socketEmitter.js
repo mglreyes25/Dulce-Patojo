@@ -61,4 +61,14 @@ function emitBloqueoLiberado(data) {
   }
 }
 
-module.exports = { emitNuevoPedido, emitCambioEstado, emitPedidoListo, emitPedidoPagado, emitCobroIniciado, emitBloqueoLiberado };
+function emitPromocionesActualizadas() {
+  try {
+    const io = getIO();
+    io.emit('promociones_actualizadas');
+    console.log('📡 Socket emit: promociones_actualizadas');
+  } catch (e) {
+    // Socket no disponible
+  }
+}
+
+module.exports = { emitNuevoPedido, emitCambioEstado, emitPedidoListo, emitPedidoPagado, emitCobroIniciado, emitBloqueoLiberado, emitPromocionesActualizadas };

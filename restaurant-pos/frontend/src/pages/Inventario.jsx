@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
@@ -7,6 +7,67 @@ import Pagination from '../components/Pagination';
 import ActionButton from '../components/ActionButton';
 import API from '../utils/api';
 import { X, Loader2, ClipboardList, Pencil } from 'lucide-react';
+
+function StockMinimoCell({ producto, headers, onUpdated }) {
+  const [value, setValue] = useState(producto.stock_minimo || 0);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setValue(producto.stock_minimo || 0);
+  }, [producto.stock_minimo]);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    if (raw === '' || /^\d+$/.test(raw)) {
+      setValue(raw === '' ? '' : Number(raw));
+    }
+  };
+
+  const guardar = async () => {
+    const val = Number(value);
+    if (isNaN(val) || val < 0) {
+      setValue(producto.stock_minimo || 0);
+      return;
+    }
+    const entero = Math.floor(val);
+    if (entero !== (producto.stock_minimo || 0)) {
+      try {
+        await axios.put(`${API}/inventario/stock-minimo`, {
+          producto_id: producto.id, stock_minimo: entero,
+        }, { headers });
+        onUpdated();
+      } catch {}
+    }
+    setValue(entero);
+  };
+
+  const handleBlur = () => guardar();
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      inputRef.current?.blur();
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="number"
+      min="0"
+      step="1"
+      value={value}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      style={{
+        width: '70px', padding: '4px 8px', borderRadius: '6px',
+        border: '1px solid var(--border)', background: 'var(--surface)',
+        color: 'var(--text)', textAlign: 'center', fontSize: '13px',
+      }}
+    />
+  );
+}
 
 export default function Inventario() {
   const [inventario, setInventario]     = useState([]);
@@ -246,26 +307,7 @@ export default function Inventario() {
                         </span>
                       </td>
                       <td>
-                        <input
-                          type="number" min="0"
-                          value={p.stock_minimo || 0}
-                          onChange={async (e) => {
-                            const val = Number(e.target.value);
-                            if (val >= 0) {
-                              try {
-                                await axios.put(`${API}/inventario/stock-minimo`, {
-                                  producto_id: p.id, stock_minimo: val,
-                                }, { headers });
-                                cargarInventario();
-                              } catch {}
-                            }
-                          }}
-                          style={{
-                            width: '70px', padding: '4px 8px', borderRadius: '6px',
-                            border: '1px solid var(--border)', background: 'var(--surface)',
-                            color: 'var(--text)', textAlign: 'center', fontSize: '13px',
-                          }}
-                        />
+                        <StockMinimoCell producto={p} headers={headers} onUpdated={cargarInventario} />
                       </td>
                       <td>
                         {p.sin_stock ? (

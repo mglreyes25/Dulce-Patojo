@@ -1,4 +1,5 @@
 const supabase = require('../config/database');
+const { emitPromocionesActualizadas } = require('../config/socketEmitter');
 
 const obtenerPromociones = async (req, res) => {
   try {
@@ -101,6 +102,7 @@ const crearPromocion = async (req, res) => {
       descripcion: `Promoción "${nombre}" de tipo ${tipo} creada`
     });
 
+    emitPromocionesActualizadas();
     res.status(201).json(data);
   } catch (e) {
     console.error(e);
@@ -146,6 +148,7 @@ const actualizarPromocion = async (req, res) => {
       descripcion: `Promoción ID ${id} actualizada`
     });
 
+    emitPromocionesActualizadas();
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Error al actualizar promoción' });
@@ -174,6 +177,7 @@ const togglePromocion = async (req, res) => {
       descripcion: `Promoción "${actual.nombre}" ${actual.activo ? 'desactivada' : 'activada'}`
     });
 
+    emitPromocionesActualizadas();
     res.json(data);
   } catch (e) {
     res.status(500).json({ error: 'Error al cambiar estado' });
@@ -192,6 +196,7 @@ const eliminarPromocion = async (req, res) => {
       descripcion: `Promoción ID ${id} eliminada`
     });
 
+    emitPromocionesActualizadas();
     res.json({ message: 'Promoción eliminada' });
   } catch (e) {
     res.status(500).json({ error: 'Error al eliminar promoción' });

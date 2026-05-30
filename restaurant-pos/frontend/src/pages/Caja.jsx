@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useInactividad } from '../hooks/useInactividad';
@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import Sidebar from '../components/Sidebar';
 import CobrosPendientesModal from '../components/CobrosPendientesModal';
 import useCobrosSocket from '../hooks/useCobrosSocket';
+import useSocket from '../hooks/useSocket';
 import {
   Apple,
   Cookie,
@@ -228,6 +229,34 @@ export default function Caja() {
     fetchCobros();
     return () => { cancelled = true; };
   }, [paginaCobros, busquedaCobros, filtroMesaCobros, refetchCobros]);
+
+  const handlePromosActualizadas = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/promociones`, { headers });
+      setPromociones(data || []);
+      setCarrito(prev => {
+        const idsEnCartel = prev.filter(i => i.tipo === 'promocion').map(p => p.id);
+        const ahora = new Date().toTimeString().slice(0, 5);
+        let cart = [...prev];
+        for (const promo of (data || [])) {
+          if (!promo.activo || !promo.automatica) continue;
+          if (idsEnCartel.includes(promo.id)) continue;
+          if (promo.tipo === 'happy_hour' && promo.hora_inicio && promo.hora_fin) {
+            if (ahora < promo.hora_inicio || ahora > promo.hora_fin) continue;
+          }
+          const descuento = calcularDescuentoPromocion(promo, cart);
+          if (descuento > 0) {
+            cart = [...cart, { ...promo, tipo: 'promocion', cantidad: 1, precio: 0, precio_final: 0, descuento }];
+          }
+        }
+        return cart;
+      });
+    } catch {}
+  }, []);
+
+  useSocket({
+    promociones_actualizadas: handlePromosActualizadas,
+  });
 
   useCobrosSocket({
     onCobroIniciado: (data) => {
