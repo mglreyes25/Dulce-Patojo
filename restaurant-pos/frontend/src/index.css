@@ -1356,6 +1356,9 @@ input:focus:not(:focus-visible) { outline: none; }
 .pos-promo-card--green { border-color: rgba(63,200,122,0.5); background: var(--green-bg); }
 .pos-promo-card--neutral { border-color: var(--border); }
 .pos-promo-card:hover { transform: translateY(-1px); }
+.pos-promo-card--inactive { opacity: 0.5; cursor: not-allowed; position: relative; }
+.pos-promo-card--inactive:hover { transform: none; }
+.pos-promo-card__badge { position: absolute; top: 8px; right: 8px; background: #e74c3c; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 700; line-height: 1.4; z-index: 1; }
 .pos-promo-name { font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
 .pos-promo-desc { font-size: 12px; color: var(--text-muted); flex: 1; line-height: 1.4; }
 .pos-promo-price { font-size: 16px; font-weight: 800; }

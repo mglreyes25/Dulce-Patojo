@@ -344,7 +344,13 @@ export default function Caja() {
       }
       const nuevo = [...carrito];
       nuevo[idx] = { ...nuevo[idx], cantidad: nuevo[idx].cantidad + 1 };
-      setCarrito(nuevo);
+      if (tipo === 'producto') {
+        const idsAuto = promociones.filter(p => p.automatica).map(p => p.id);
+        const sinAuto = nuevo.filter(i => i.tipo !== 'promocion' || !idsAuto.includes(i.id));
+        setCarrito(agregarAutoPromos(sinAuto, true));
+      } else {
+        setCarrito(nuevo);
+      }
       return;
     }
 
@@ -392,7 +398,13 @@ export default function Caja() {
 
     const nuevo = [...carrito];
     nuevo[idx] = { ...nuevo[idx], cantidad: val };
-    setCarrito(nuevo);
+    if (item.tipo === 'producto') {
+      const idsAuto = promociones.filter(p => p.automatica).map(p => p.id);
+      const sinAuto = nuevo.filter(i => i.tipo !== 'promocion' || !idsAuto.includes(i.id));
+      setCarrito(agregarAutoPromos(sinAuto, true));
+    } else {
+      setCarrito(nuevo);
+    }
   };
 
   const quitarDelCarrito = (idx) => {
@@ -712,12 +724,14 @@ export default function Caja() {
     let descText = promo.valor && (promo.tipo === 'descuento_porcentaje' || promo.tipo === 'happy_hour')
       ? ` - ${promo.valor}% OFF` : '';
     if (promo.cantidad_maxima) descText += ` (max ${promo.cantidad_maxima} uds)`;
+    const inactiva = !promo.activo;
     return (
       <div
         key={`promo-${promo.id}`}
-        className={`pos-promo-card pos-promo-card--${info.tone}`}
-        onClick={() => agregarAlCarrito(promo, 'promocion')}
+        className={`pos-promo-card pos-promo-card--${info.tone}${inactiva ? ' pos-promo-card--inactive' : ''}`}
+        onClick={() => !inactiva && agregarAlCarrito(promo, 'promocion')}
       >
+        {inactiva && <span className="pos-promo-card__badge">NO DISPONIBLE</span>}
         <span className="pos-promo-name">
           <IconComp size={18} /> {promo.nombre}
         </span>
