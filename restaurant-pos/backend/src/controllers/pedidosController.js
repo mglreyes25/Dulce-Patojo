@@ -734,11 +734,58 @@ const obtenerResumen = async (req, res) => {
       .select('*', { count: 'exact', head: true })
       .eq('activo', true);
 
+    const { count: enPreparacion } = await supabase
+      .from('pedidos')
+      .select('*', { count: 'exact', head: true })
+      .eq('estado', 'en_preparacion');
+
+    const { count: listos } = await supabase
+      .from('pedidos')
+      .select('*', { count: 'exact', head: true })
+      .eq('estado', 'listo');
+
+    const { data: pagosHoy } = await supabase
+      .from('pagos')
+      .select('id, total, metodo, creado_en, usuario_id, pedido_id')
+      .gte('creado_en', hoy)
+      .order('creado_en', { ascending: false });
+
+    const userIds = [...new Set((pagosHoy || []).filter(p => p.usuario_id).map(p => p.usuario_id))];
+    const userNameMap = {};
+    if (userIds.length > 0) {
+      const { data: userData } = await supabase
+        .from('usuarios')
+        .select('id, nombre')
+        .in('id', userIds);
+      (userData || []).forEach(u => { userNameMap[u.id] = u.nombre; });
+    }
+
+    const pedidoIds = [...new Set((pagosHoy || []).filter(p => p.pedido_id).map(p => p.pedido_id))];
+    const pedidoMap = {};
+    if (pedidoIds.length > 0) {
+      const { data: pedData } = await supabase
+        .from('pedidos')
+        .select('id, numero_ticket, cliente_nombre')
+        .in('id', pedidoIds);
+      (pedData || []).forEach(p => { pedidoMap[p.id] = p; });
+    }
+
     res.json({
       pedidos_hoy: pedidosHoy || 0,
       ventas_totales: ventasTotales,
       productos_activos: prodActivos || 0,
       usuarios_activos: usersActivos || 0,
+      en_preparacion: enPreparacion || 0,
+      listos: listos || 0,
+      ventas_del_dia: (pagosHoy || []).map(p => ({
+        id: p.id,
+        hora: p.creado_en ? new Date(p.creado_en).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' }) : '',
+        ticket: pedidoMap[p.pedido_id]?.numero_ticket || '—',
+        cliente: pedidoMap[p.pedido_id]?.cliente_nombre || 'Mostrador',
+        monto: Number(p.total || 0),
+        metodo: p.metodo,
+        atendido_por: userNameMap[p.usuario_id] || '—',
+      })),
     });
   } catch (e) {
     console.error('Error en resumen:', e);

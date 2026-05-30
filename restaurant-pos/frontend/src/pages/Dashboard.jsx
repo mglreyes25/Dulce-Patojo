@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import {
   Coffee, Package, Users, TrendingUp, ChefHat, Rocket, Map,
-  CakeSlice, ClipboardList, Salad, PartyPopper,
+  CakeSlice, ClipboardList, Salad, PartyPopper, Clock, UserCheck, Circle,
 } from 'lucide-react';
 import { useInactividad } from '../hooks/useInactividad';
 import { API_URL } from '../utils/api';
@@ -14,6 +14,7 @@ function Dashboard() {
   const [usuario, setUsuario] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const navigate = useNavigate();
   useInactividad();
 
@@ -38,16 +39,33 @@ function Dashboard() {
     }
   };
 
+  const fetchOnlineUsers = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(`${API_URL}/usuarios/online`, { headers });
+      setOnlineUsers(res.data || []);
+    } catch {
+      // silent
+    }
+  };
+
   useEffect(() => {
     if (!usuario) return;
     fetchResumen();
-    const interval = setInterval(fetchResumen, 30000);
+    fetchOnlineUsers();
+    const interval = setInterval(() => {
+      fetchResumen();
+      fetchOnlineUsers();
+    }, 30000);
     return () => clearInterval(interval);
   }, [usuario]);
 
   useSocket({
     cambio_estado: () => {
       fetchResumen();
+    },
+    'usuarios-online': () => {
+      fetchOnlineUsers();
     },
   });
 
@@ -85,6 +103,8 @@ function Dashboard() {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
+  const ventasDelDia = stats?.ventas_del_dia || [];
+
   return (
     <div className="dashboard-page">
       <Sidebar usuario={usuario} activeRoute="dashboard" />
@@ -106,6 +126,20 @@ function Dashboard() {
             </div>
             <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.pedidos_hoy ?? 0}</div>
             <div className="stat-card-label">Pedidos Hoy</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">
+              <ChefHat size={20} className="stat-card-icon-svg" />
+            </div>
+            <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.en_preparacion ?? 0}</div>
+            <div className="stat-card-label">En Preparación</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-card-icon">
+              <Clock size={20} className="stat-card-icon-svg" />
+            </div>
+            <div className="stat-card-value">{loading ? <span className="skeleton skeleton-line--value" style={{display:'inline-block'}}>&nbsp;</span> : stats?.listos ?? 0}</div>
+            <div className="stat-card-label">Listos</div>
           </div>
           {(usuario.rol === 'Admin' || usuario.rol === 'Cajero') && (
             <div className="stat-card">
@@ -135,6 +169,66 @@ function Dashboard() {
             </div>
           )}
         </div>
+
+        {(usuario.rol === 'Admin' || usuario.rol === 'Cajero') && ventasDelDia.length > 0 && (
+          <div className="card" style={{ marginTop: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>
+              <TrendingUp size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+              Ventas del Día
+            </h3>
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Ticket</th>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Atendido por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ventasDelDia.map(v => (
+                    <tr key={v.id}>
+                      <td style={{ whiteSpace: 'nowrap' }}>{v.hora}</td>
+                      <td>#{v.ticket}</td>
+                      <td>{v.cliente}</td>
+                      <td style={{ fontWeight: 600 }}>${Number(v.monto).toFixed(2)}</td>
+                      <td><span className="badge badge-info">{v.metodo}</span></td>
+                      <td>{v.atendido_por}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {usuario.rol === 'Admin' && onlineUsers.length > 0 && (
+          <div className="card" style={{ marginTop: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>
+              <UserCheck size={18} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+              Usuarios en Línea
+              <span className="badge badge-success" style={{ marginLeft: 8, fontSize: 11, verticalAlign: 'middle' }}>{onlineUsers.length}</span>
+            </h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              {onlineUsers.map(u => (
+                <div key={u.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: 'var(--surface)', borderRadius: 8, padding: '8px 14px',
+                  border: '1px solid var(--border)',
+                }}>
+                  <Circle size={10} fill="var(--green)" color="var(--green)" />
+                  <span style={{ fontWeight: 500 }}>{u.nombre}</span>
+                  <span className={`badge badge-${u.rol === 'Admin' ? 'primary' : u.rol === 'Cajero' ? 'info' : u.rol === 'Cocinero' ? 'purple' : 'success'}`} style={{ fontSize: 10 }}>
+                    {u.rol}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="accesos-rapidos">
           <h3>Accesos Rápidos</h3>

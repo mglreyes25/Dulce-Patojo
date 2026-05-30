@@ -253,12 +253,12 @@ export default function Reportes() {
     }
 
     if (invMovs.length > 0) {
-      const invHeader = [['Fecha', 'Producto', 'Tipo', 'Cantidad', 'Descripción']];
+      const invHeader = [['Fecha', 'Hora', 'Producto', 'Tipo', 'Cantidad', 'Descripción', 'Realizado por']];
       const invRows = invMovs.map(m => [
-        formatDate(m.fecha), m.producto, m.tipo, m.cantidad, m.descripcion || '-',
+        formatDate(m.fecha), m.hora || '', m.producto, m.tipo, m.cantidad, m.descripcion || '-', m.usuario_nombre || '',
       ]);
       const wsInv = XLSX.utils.aoa_to_sheet([...invHeader, ...invRows]);
-      wsInv['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 30 }];
+      wsInv['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 24 }, { wch: 10 }, { wch: 10 }, { wch: 30 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsInv, 'Inventario');
     }
 
@@ -266,14 +266,14 @@ export default function Reportes() {
       const cajaHeader = [
         [`Ingresos: $${(caja.total_ingresos || 0).toFixed(2)}  |  Egresos: $${(caja.total_egresos || 0).toFixed(2)}  |  Balance: $${(caja.balance_neto || 0).toFixed(2)}`],
         [],
-        ['Fecha', 'Tipo', 'Monto', 'Descripción'],
+        ['Fecha', 'Hora', 'Tipo', 'Monto', 'Descripción', 'Atendido por'],
       ];
       const cajaRows = caja.movimientos.map(m => [
-        formatDate(m.fecha), m.tipo, Number(m.monto || 0), m.descripcion || '-',
+        formatDate(m.fecha), m.hora || '', m.tipo, Number(m.monto || 0), m.descripcion || '-', m.usuario_nombre || '',
       ]);
       const wsCaja = XLSX.utils.aoa_to_sheet([...cajaHeader, ...cajaRows]);
-      wsCaja['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }];
-      wsCaja['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 30 }];
+      wsCaja['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+      wsCaja['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 30 }, { wch: 20 }];
       XLSX.utils.book_append_sheet(wb, wsCaja, 'Resumen de Caja');
     }
 
@@ -464,16 +464,19 @@ export default function Reportes() {
                 <thead>
                   <tr>
                     <th>Fecha</th>
+                    <th>Hora</th>
                     <th>Producto</th>
                     <th>Tipo</th>
                     <th>Cantidad</th>
                     <th>Descripción</th>
+                    <th>Realizado por</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invPaginados.length > 0 ? invPaginados.map((m, i) => (
                     <tr key={i}>
                       <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(m.fecha)}</td>
+                      <td style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: 12 }}>{m.hora || '-'}</td>
                       <td>{m.producto}</td>
                       <td>
                         <span className={`badge ${m.tipo === 'entrada' ? 'badge-success' : 'badge-danger'}`}>
@@ -482,10 +485,11 @@ export default function Reportes() {
                       </td>
                       <td>{m.cantidad}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{m.descripcion || '-'}</td>
+                      <td style={{ fontSize: 12 }}>{m.usuario_nombre || '—'}</td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
+                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
                         Sin movimientos en este período
                       </td>
                     </tr>
@@ -523,36 +527,40 @@ export default function Reportes() {
                 </div>
               </div>
               <div className="table-responsive">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Tipo</th>
-                      <th>Monto</th>
-                      <th>Descripción</th>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                    <th>Descripción</th>
+                    <th>Atendido por</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(caja?.movimientos || []).length > 0 ? caja.movimientos.map((m, i) => (
+                    <tr key={i}>
+                      <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(m.fecha)}</td>
+                      <td style={{ whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: 12 }}>{m.hora || '-'}</td>
+                      <td>
+                        <span className={`badge ${m.tipo === 'ingreso' ? 'badge-success' : 'badge-danger'}`}>
+                          {m.tipo}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>${Number(m.monto).toFixed(2)}</td>
+                      <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{m.descripcion || '-'}</td>
+                      <td style={{ fontSize: 12 }}>{m.usuario_nombre || '—'}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {(caja?.movimientos || []).length > 0 ? caja.movimientos.map((m, i) => (
-                      <tr key={i}>
-                        <td style={{ whiteSpace: 'nowrap' }}>{formatFecha(m.fecha)}</td>
-                        <td>
-                          <span className={`badge ${m.tipo === 'ingreso' ? 'badge-success' : 'badge-danger'}`}>
-                            {m.tipo}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>${Number(m.monto).toFixed(2)}</td>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{m.descripcion || '-'}</td>
-                      </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
-                          Sin movimientos de caja en este período
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: 24 }}>
+                        Sin movimientos de caja en este período
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
               </div>
             </>
           )}

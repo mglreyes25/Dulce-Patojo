@@ -192,7 +192,7 @@ exports.obtenerMovimientosInventario = async (req, res) => {
 
     let query = supabase
       .from('inventario_movimientos')
-      .select('*, productos:producto_id(nombre)')
+      .select('*, productos:producto_id(nombre), usuarios:usuario_id(nombre)')
       .gte('creado_en', start)
       .lte('creado_en', end)
       .order('creado_en', { ascending: false });
@@ -213,10 +213,12 @@ exports.obtenerMovimientosInventario = async (req, res) => {
       salidas,
       movimientos: (movimientos || []).map(m => ({
         fecha: m.creado_en,
+        hora: m.creado_en ? new Date(m.creado_en).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' }) : '',
         producto: m.productos?.nombre || `Producto #${m.producto_id}`,
         tipo: m.tipo,
         cantidad: m.cantidad,
         descripcion: m.descripcion || '',
+        usuario_nombre: m.usuarios?.nombre || '—',
       })),
     });
   } catch (error) {
@@ -233,7 +235,7 @@ exports.obtenerResumenCaja = async (req, res) => {
     let pagos;
     let pagosError;
     const cajaCols = [
-      'id, total, metodo, creado_en, pedido_id',
+      'id, total, metodo, creado_en, pedido_id, usuario_id',
       'id, total, metodo, creado_en',
       'id, total, metodo',
     ];
@@ -255,15 +257,27 @@ exports.obtenerResumenCaja = async (req, res) => {
     const total_ingresos = (pagos || []).reduce((s, p) => s + Number(p.total || 0), 0);
     const total_egresos = 0;
 
+    const userIds = [...new Set((pagos || []).filter(p => p.usuario_id).map(p => p.usuario_id))];
+    const userNameMap = {};
+    if (userIds.length > 0) {
+      const { data: userData } = await supabase
+        .from('usuarios')
+        .select('id, nombre')
+        .in('id', userIds);
+      (userData || []).forEach(u => { userNameMap[u.id] = u.nombre; });
+    }
+
     res.json({
       total_ingresos,
       total_egresos,
       balance_neto: total_ingresos - total_egresos,
       movimientos: (pagos || []).map(p => ({
         fecha: p.creado_en,
+        hora: p.creado_en ? new Date(p.creado_en).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' }) : '',
         tipo: 'ingreso',
         monto: p.total,
         descripcion: `Pago con ${p.metodo}`,
+        usuario_nombre: userNameMap[p.usuario_id] || '—',
       })),
     });
   } catch (error) {

@@ -220,4 +220,21 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
-module.exports = { obtenerUsuarios, obtenerUsuarioPorId, crearUsuario, actualizarUsuario, inactivarUsuario, activarUsuario, eliminarUsuario };
+const { getOnlineUsers } = require('../config/socket');
+
+const obtenerUsuariosOnline = async (req, res) => {
+  try {
+    const onlineIds = getOnlineUsers();
+    if (onlineIds.length === 0) return res.json([]);
+    const { data } = await supabase
+      .from('usuarios')
+      .select('id, nombre, rol')
+      .in('id', onlineIds);
+    res.json(data || []);
+  } catch (e) {
+    console.error('Error al obtener usuarios online:', e);
+    res.status(500).json({ error: 'Error al obtener usuarios online' });
+  }
+};
+
+module.exports = { obtenerUsuarios, obtenerUsuarioPorId, crearUsuario, actualizarUsuario, inactivarUsuario, activarUsuario, eliminarUsuario, obtenerUsuariosOnline };

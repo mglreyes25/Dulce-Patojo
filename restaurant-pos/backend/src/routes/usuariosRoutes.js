@@ -3,7 +3,7 @@ const {
   obtenerUsuarios, obtenerUsuarioPorId,
   crearUsuario, actualizarUsuario,
   inactivarUsuario, activarUsuario,
-  eliminarUsuario
+  eliminarUsuario, obtenerUsuariosOnline
 } = require('../controllers/usuariosController');
 const authMiddleware = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/auth');
@@ -11,6 +11,7 @@ const { requireAdmin } = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/',                  authMiddleware, requireAdmin, obtenerUsuarios);
+router.get('/online',            authMiddleware, obtenerUsuariosOnline);
 router.get('/:id',               authMiddleware, requireAdmin, obtenerUsuarioPorId);
 router.post('/',                 authMiddleware, requireAdmin, crearUsuario);
 router.put('/:id',               authMiddleware, requireAdmin, actualizarUsuario);
