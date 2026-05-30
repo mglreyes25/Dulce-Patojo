@@ -45,7 +45,8 @@ const crearPromocion = async (req, res) => {
   const {
     nombre, descripcion, tipo, valor,
     producto_id, categoria_id,
-    hora_inicio, hora_fin, automatica
+    hora_inicio, hora_fin, automatica,
+    cantidad_maxima
   } = req.body;
 
   if (!nombre || !tipo)
@@ -67,6 +68,11 @@ const crearPromocion = async (req, res) => {
       return res.status(400).json({ error: 'La hora de inicio debe ser menor a la hora de fin' });
   }
 
+  if (tipo === 'dos_x_uno' || tipo === 'tres_x_dos') {
+    if (!producto_id && !categoria_id)
+      return res.status(400).json({ error: 'Debes seleccionar un producto o categoría para esta promoción' });
+  }
+
   try {
     const { data, error } = await supabase
       .from('promociones')
@@ -77,6 +83,7 @@ const crearPromocion = async (req, res) => {
         hora_inicio: hora_inicio || null,
         hora_fin: hora_fin || null,
         automatica: automatica !== false,
+        cantidad_maxima: cantidad_maxima ? Number(cantidad_maxima) : null,
         creado_por: req.user.id
       })
       .select('*, productos(nombre, precio), categorias(nombre)')
@@ -102,20 +109,22 @@ const actualizarPromocion = async (req, res) => {
   const {
     nombre, descripcion, tipo, valor,
     producto_id, categoria_id,
-    hora_inicio, hora_fin, automatica
+    hora_inicio, hora_fin, automatica,
+    cantidad_maxima
   } = req.body;
 
   try {
     const updates = {};
-    if (nombre      !== undefined) updates.nombre      = nombre;
-    if (descripcion !== undefined) updates.descripcion = descripcion;
-    if (tipo        !== undefined) updates.tipo        = tipo;
-    if (valor       !== undefined) updates.valor       = valor;
-    if (producto_id !== undefined) updates.producto_id = producto_id || null;
-    if (categoria_id !== undefined) updates.categoria_id = categoria_id || null;
-    if (hora_inicio !== undefined) updates.hora_inicio = hora_inicio || null;
-    if (hora_fin    !== undefined) updates.hora_fin    = hora_fin    || null;
-    if (automatica  !== undefined) updates.automatica  = automatica;
+    if (nombre        !== undefined) updates.nombre        = nombre;
+    if (descripcion   !== undefined) updates.descripcion   = descripcion;
+    if (tipo          !== undefined) updates.tipo          = tipo;
+    if (valor         !== undefined) updates.valor         = valor;
+    if (producto_id   !== undefined) updates.producto_id   = producto_id || null;
+    if (categoria_id  !== undefined) updates.categoria_id  = categoria_id || null;
+    if (hora_inicio   !== undefined) updates.hora_inicio   = hora_inicio || null;
+    if (hora_fin      !== undefined) updates.hora_fin      = hora_fin    || null;
+    if (automatica    !== undefined) updates.automatica    = automatica;
+    if (cantidad_maxima !== undefined) updates.cantidad_maxima = cantidad_maxima ? Number(cantidad_maxima) : null;
     updates.actualizado_en = new Date().toISOString();
 
     const { data, error } = await supabase

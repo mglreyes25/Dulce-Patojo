@@ -84,6 +84,13 @@ function PromoCard({ promo, onToggle, onEditar, onEliminar, esAdmin }) {
               </div>
             )}
 
+            {promo.cantidad_maxima && (
+              <div className="promo-card-info-row">
+                <span className="promo-card-info-label">Cant. máxima</span>
+                <span className="promo-card-info-value">{promo.cantidad_maxima} producto(s)</span>
+              </div>
+            )}
+
             <div className="promo-card-info-row">
               <span className="promo-card-info-label">Aplicación</span>
               <span className="promo-card-info-value" style={{ color: promo.automatica ? 'var(--green)' : 'var(--amber)' }}>
@@ -134,7 +141,8 @@ export default function Promociones() {
   const [form, setForm] = useState({
     nombre: '', descripcion: '', tipo: 'descuento_porcentaje',
     valor: '', producto_id: '', categoria_id: '',
-    hora_inicio: '', hora_fin: '', automatica: true
+    hora_inicio: '', hora_fin: '', automatica: true,
+    cantidad_maxima: ''
   });
 
   const navigate = useNavigate();
@@ -177,7 +185,7 @@ export default function Promociones() {
 
   const abrirCrear = () => {
     setEditando(null);
-    setForm({ nombre: '', descripcion: '', tipo: 'descuento_porcentaje', valor: '', producto_id: '', categoria_id: '', hora_inicio: '', hora_fin: '', automatica: true });
+    setForm({ nombre: '', descripcion: '', tipo: 'descuento_porcentaje', valor: '', producto_id: '', categoria_id: '', hora_inicio: '', hora_fin: '', automatica: true, cantidad_maxima: '' });
     setError('');
     setShowModal(true);
   };
@@ -191,7 +199,8 @@ export default function Promociones() {
       categoria_id: p.categoria_id || '',
       hora_inicio: p.hora_inicio || '',
       hora_fin: p.hora_fin || '',
-      automatica: p.automatica
+      automatica: p.automatica,
+      cantidad_maxima: p.cantidad_maxima || ''
     });
     setError('');
     setShowModal(true);
@@ -218,6 +227,7 @@ export default function Promociones() {
         categoria_id: form.categoria_id || null,
         hora_inicio: form.hora_inicio || null,
         hora_fin: form.hora_fin || null,
+        cantidad_maxima: form.cantidad_maxima ? Number(form.cantidad_maxima) : null,
       };
       if (editando) {
         await axios.put(`${API}/promociones/${editando.id}`, payload, { headers });
@@ -388,16 +398,25 @@ export default function Promociones() {
               </div>
 
               {form.tipo === 'happy_hour' && (
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Hora inicio *</label>
-                    <input type="time" value={form.hora_inicio} onChange={e => setForm({ ...form, hora_inicio: e.target.value })} />
+                <>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Hora inicio *</label>
+                      <input type="time" value={form.hora_inicio} onChange={e => setForm({ ...form, hora_inicio: e.target.value })} />
+                    </div>
+                    <div className="form-group">
+                      <label>Hora fin *</label>
+                      <input type="time" value={form.hora_fin} onChange={e => setForm({ ...form, hora_fin: e.target.value })} />
+                    </div>
                   </div>
                   <div className="form-group">
-                    <label>Hora fin *</label>
-                    <input type="time" value={form.hora_fin} onChange={e => setForm({ ...form, hora_fin: e.target.value })} />
+                    <label>Cantidad máxima de productos</label>
+                    <input type="number" min="1" value={form.cantidad_maxima} onChange={e => setForm({ ...form, cantidad_maxima: e.target.value })} placeholder="Ej: 5 (dejar vacío = sin límite)" />
+                    <small style={{ color: 'var(--text-dim)', fontSize: 12 }}>
+                      Límite de productos a los que se aplica la promoción por pedido.
+                    </small>
                   </div>
-                </div>
+                </>
               )}
 
               <div className="form-group">

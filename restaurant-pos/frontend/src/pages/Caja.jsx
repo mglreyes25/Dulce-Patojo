@@ -53,26 +53,37 @@ const calcularDescuentoPromocion = (promo, carrito) => {
   if (itemsElegibles.length === 0) return 0;
 
   switch (promo.tipo) {
-    case 'descuento_porcentaje':
-    case 'happy_hour': {
+    case 'descuento_porcentaje': {
       const pct = Number(promo.valor || 0) / 100;
       return itemsElegibles.reduce((sum, item) =>
         sum + Number(item.precio || 0) * item.cantidad * pct, 0
       );
     }
+    case 'happy_hour': {
+      const pctHH = Number(promo.valor || 0) / 100;
+      const maxHH = promo.cantidad_maxima ? Number(promo.cantidad_maxima) : Infinity;
+      let countHH = 0;
+      return itemsElegibles.reduce((sum, item) => {
+        const aplicar = Math.min(item.cantidad, maxHH - countHH);
+        countHH += aplicar;
+        return sum + Number(item.precio || 0) * aplicar * pctHH;
+      }, 0);
+    }
     case 'dos_x_uno': {
-      const masBarato = itemsElegibles.reduce((min, item) =>
+      const totalItems2x1 = itemsElegibles.reduce((sum, item) => sum + item.cantidad, 0);
+      if (totalItems2x1 < 2) return 0;
+      const masBarato2x1 = itemsElegibles.reduce((min, item) =>
         Math.min(min, Number(item.precio || 0)), Infinity
       );
-      return masBarato === Infinity ? 0 : masBarato;
+      return masBarato2x1 === Infinity ? 0 : masBarato2x1;
     }
     case 'tres_x_dos': {
-      const totalItems = itemsElegibles.reduce((sum, item) => sum + item.cantidad, 0);
-      if (totalItems < 3) return 0;
-      const masBarato = itemsElegibles.reduce((min, item) =>
+      const totalItems3x2 = itemsElegibles.reduce((sum, item) => sum + item.cantidad, 0);
+      if (totalItems3x2 < 3) return 0;
+      const masBarato3x2 = itemsElegibles.reduce((min, item) =>
         Math.min(min, Number(item.precio || 0)), Infinity
       );
-      return masBarato === Infinity ? 0 : masBarato;
+      return masBarato3x2 === Infinity ? 0 : masBarato3x2;
     }
     default:
       return 0;
@@ -669,8 +680,9 @@ export default function Caja() {
   const renderPromo = (promo) => {
     const info = TIPOS_PROMO[promo.tipo] || { label: promo.tipo, icon: PartyPopper, tone: 'neutral' };
     const IconComp = info.icon;
-    const descText = promo.valor && (promo.tipo === 'descuento_porcentaje' || promo.tipo === 'happy_hour')
+    let descText = promo.valor && (promo.tipo === 'descuento_porcentaje' || promo.tipo === 'happy_hour')
       ? ` - ${promo.valor}% OFF` : '';
+    if (promo.cantidad_maxima) descText += ` (max ${promo.cantidad_maxima} uds)`;
     return (
       <div
         key={`promo-${promo.id}`}

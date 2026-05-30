@@ -24,11 +24,25 @@ const obtenerCobrosPendientes = async (req, res) => {
     const { data, error, count } = await query;
     if (error) {
       console.error('Error query vw_cobros_pendientes:', error);
-      const { data: fallback } = await supabase
+      let fbQuery = supabase
         .from('pedidos')
         .select('*, mesa:mesas(numero), pedido_items(*)')
-        .in('estado', ['listo', 'entregado'])
-        .order('creado_en', { ascending: false });
+        .in('estado', ['listo', 'entregado']);
+
+      if (search) {
+        const term = `%${search}%`;
+        fbQuery = fbQuery.or(`numero_ticket::text.ilike.${term},cliente_nombre.ilike.${term}`);
+      }
+      if (mesa) {
+        fbQuery = fbQuery.eq('mesa_id', Number(mesa));
+      }
+
+      const { data: fallback, error: fbError } = await fbQuery.order('creado_en', { ascending: false });
+
+      if (fbError) {
+        console.error('Error en fallback query:', fbError);
+        return res.json({ data: [], total: 0, page: 1, limit: Number(limit) });
+      }
 
       // Normalizar a la misma estructura que vw_cobros_pendientes
       const normalizados = (fallback || []).map(p => ({
