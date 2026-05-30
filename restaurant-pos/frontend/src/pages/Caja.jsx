@@ -811,6 +811,12 @@ export default function Caja() {
   }
 
   return (
+    <PayPalScriptProvider
+      options={{
+        clientId: 'AZ68L6DKG644ebwXVMUTvSBWvDuPyHjJOOqqBQMR5efPOdaObjp6eBx-xPsopNtFxiWQspcHMDCQ2sw-',
+        currency: 'USD',
+      }}
+    >
     <div className="dashboard-page">
       <Sidebar usuario={usuario} activeRoute="caja" />
       <div className="pos-layout">
@@ -1249,16 +1255,15 @@ export default function Caja() {
               {metodoPago === 'billetera_digital' && (
                 <div style={{ marginBottom: 16 }}>
                   <label className="pos-label">Pago con PayPal</label>
-                  <PayPalScriptProvider
-                    options={{
-                      clientId: 'AZ68L6DKG644ebwXVMUTvSBWvDuPyHjJOOqqBQMR5efPOdaObjp6eBx-xPsopNtFxiWQspcHMDCQ2sw-',
-                      currency: 'USD',
-                    }}
-                  >
+                  {paypalOrderId ? (
+                    <p style={{ fontSize: 14, color: 'var(--green)', textAlign: 'center', padding: 12 }}>
+                      ✅ Pagado — PayPal ID: {paypalOrderId.slice(0, 12)}...
+                    </p>
+                  ) : (
                     <PayPalButtons
                       key={paypalOrderId || 'initial'}
                       style={{ layout: 'vertical', shape: 'rect', color: 'gold' }}
-                      disabled={paypalOrderId !== null}
+                      disabled={procesandoPago}
                       createOrder={(data, actions) => {
                         const totalStr = (montoPago + propina).toFixed(2);
                         return actions.order.create({
@@ -1272,7 +1277,6 @@ export default function Caja() {
                         const details = await actions.order.capture();
                         setPaypalOrderId(details.id);
                         addToast(`PayPal aprobado (ID: ${details.id.slice(0, 8)}...)`, 'success');
-                        // Procesar pago automáticamente
                         const totalConPropina = montoPago + propina;
                         setProcesandoPago(true);
                         try {
@@ -1305,11 +1309,6 @@ export default function Caja() {
                         addToast('Error al procesar pago con PayPal', 'error');
                       }}
                     />
-                  </PayPalScriptProvider>
-                  {paypalOrderId && (
-                    <p style={{ fontSize: 12, color: 'var(--green)', textAlign: 'center', marginTop: 8 }}>
-                      ✅ Pagado — PayPal ID: {paypalOrderId.slice(0, 12)}...
-                    </p>
                   )}
                 </div>
               )}
@@ -1417,5 +1416,6 @@ export default function Caja() {
         )}
       </div>
     </div>
+  </PayPalScriptProvider>
   );
 }
