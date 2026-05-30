@@ -4,10 +4,11 @@ const obtenerPromociones = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('promociones')
-      .select('*, productos(nombre, precio), categorias(nombre)')
+      .select('id, nombre, descripcion, tipo, valor, producto_id, categoria_id, hora_inicio, hora_fin, automatica, activo, cantidad_maxima, creado_en, actualizado_en, creado_por, productos(nombre, precio), categorias(nombre)')
       .order('creado_en', { ascending: false });
     if (error) throw error;
-    res.json(data);
+    // Asegurar que cantidad_maxima siempre esté presente
+    res.json((data || []).map(p => ({ ...p, cantidad_maxima: p.cantidad_maxima || null })));
   } catch (e) {
     res.status(500).json({ error: 'Error al obtener promociones' });
   }
@@ -20,14 +21,17 @@ const obtenerPromocionesActivas = async (req, res) => {
 
     const { data, error } = await supabase
       .from('promociones')
-      .select('*, productos(id, nombre, precio), categorias(id, nombre)')
+      .select('id, nombre, descripcion, tipo, valor, producto_id, categoria_id, hora_inicio, hora_fin, automatica, activo, cantidad_maxima, creado_en, actualizado_en, creado_por, productos(id, nombre, precio), categorias(id, nombre)')
       .eq('activo', true)
       .order('creado_en', { ascending: false });
 
     if (error) throw error;
 
+    // Asegurar que cantidad_maxima siempre esté presente
+    const conCantidad = (data || []).map(p => ({ ...p, cantidad_maxima: p.cantidad_maxima || null }));
+
     // Filtrar happy hour por hora actual
-    const filtradas = data.filter(p => {
+    const filtradas = conCantidad.filter(p => {
       if (p.tipo === 'happy_hour') {
         if (!p.hora_inicio || !p.hora_fin) return true;
         return horaActual >= p.hora_inicio && horaActual <= p.hora_fin;

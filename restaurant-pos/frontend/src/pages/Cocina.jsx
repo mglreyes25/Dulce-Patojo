@@ -109,9 +109,14 @@ function Cocina() {
 
   if (!usuario) return null;
 
-  const pedidosPendientes = pedidos.filter(p => p.estado === 'recibido' || p.estado === 'pendiente');
-  const pedidosEnPreparacion = pedidos.filter(p => p.estado === 'en_preparacion');
-  const pedidosListos = pedidos.filter(p => p.estado === 'listo');
+  const pedidosPendientes = pedidos.filter(p => p.estado === 'recibido' || p.estado === 'pendiente')
+    .sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+  const pedidosEnPreparacion = pedidos.filter(p => p.estado === 'en_preparacion')
+    .sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+  const pedidosListos = pedidos.filter(p => p.estado === 'listo')
+    .sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
+  const oldestPendienteId = pedidosPendientes.length > 0 ? pedidosPendientes[0].id : null;
+  const oldestPreparacionId = pedidosEnPreparacion.length > 0 ? pedidosEnPreparacion[0].id : null;
 
   return (
     <div className="dashboard-page">
@@ -198,6 +203,7 @@ function Cocina() {
                   <PedidoCard
                     key={p.id} pedido={p} onEstado={cambiarEstado}
                     tiempoFn={tiempoTranscurrido} onVerReceta={verReceta}
+                    soloprimero={oldestPendienteId}
                   />
                 ))}
               </div>
@@ -218,6 +224,7 @@ function Cocina() {
                   <PedidoCard
                     key={p.id} pedido={p} onEstado={cambiarEstado}
                     tiempoFn={tiempoTranscurrido} onVerReceta={verReceta}
+                    soloprimero={oldestPreparacionId}
                   />
                 ))}
               </div>
@@ -249,7 +256,7 @@ function Cocina() {
   );
 }
 
-function PedidoCard({ pedido, onEstado, tiempoFn, onVerReceta }) {
+function PedidoCard({ pedido, onEstado, tiempoFn, onVerReceta, soloprimero }) {
   const isNew = ['recibido', 'pendiente'].includes(pedido.estado)
     && pedido._receivedAt
     && (Date.now() - pedido._receivedAt) <= 10000;
@@ -317,13 +324,23 @@ function PedidoCard({ pedido, onEstado, tiempoFn, onVerReceta }) {
 
       <div className="kitchen-actions">
         {(pedido.estado === 'recibido' || pedido.estado === 'pendiente') && (
-          <button className="kitchen-btn kitchen-btn-start" onClick={() => onEstado(pedido.id, 'en_preparacion')}>
-            Iniciar Preparación
+          <button
+            className="kitchen-btn kitchen-btn-start"
+            disabled={soloprimero !== undefined && pedido.id !== soloprimero}
+            onClick={() => onEstado(pedido.id, 'en_preparacion')}
+            title={soloprimero !== undefined && pedido.id !== soloprimero ? 'Atiende primero el pedido más antiguo' : ''}
+          >
+            {soloprimero !== undefined && pedido.id !== soloprimero ? 'Esperar turno' : 'Iniciar Preparación'}
           </button>
         )}
         {pedido.estado === 'en_preparacion' && (
-          <button className="kitchen-btn kitchen-btn-ready" onClick={() => onEstado(pedido.id, 'listo')}>
-            Marcar Listo
+          <button
+            className="kitchen-btn kitchen-btn-ready"
+            disabled={soloprimero !== undefined && pedido.id !== soloprimero}
+            onClick={() => onEstado(pedido.id, 'listo')}
+            title={soloprimero !== undefined && pedido.id !== soloprimero ? 'Atiende primero el pedido más antiguo' : ''}
+          >
+            {soloprimero !== undefined && pedido.id !== soloprimero ? 'Esperar turno' : 'Marcar Listo'}
           </button>
         )}
         {pedido.estado === 'listo' && (

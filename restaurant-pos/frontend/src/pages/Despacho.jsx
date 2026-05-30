@@ -144,8 +144,10 @@ function Despacho() {
 
   if (!usuario) return null;
 
-  const listos = pedidos.filter(p => p.estado === 'listo');
+  const listos = pedidos.filter(p => p.estado === 'listo')
+    .sort((a, b) => new Date(a.creado_en) - new Date(b.creado_en));
   const entregados = pedidos.filter(p => p.estado === 'entregado');
+  const oldestListoId = listos.length > 0 ? listos[0].id : null;
 
   return (
     <div className="dashboard-page">
@@ -226,8 +228,13 @@ function Despacho() {
                         <button className="dispatch-btn-secondary" onClick={() => setTicketModal(p)}>
                           <Receipt size={14} /> Ver Ticket
                         </button>
-                        <button className="dispatch-btn" onClick={() => entregar(p.id)}>
-                          Marcar Entregado
+                        <button
+                          className="dispatch-btn"
+                          disabled={p.id !== oldestListoId}
+                          onClick={() => entregar(p.id)}
+                          title={p.id !== oldestListoId ? 'Entrega primero el pedido más antiguo' : ''}
+                        >
+                          {p.id !== oldestListoId ? 'Esperar turno' : 'Marcar Entregado'}
                         </button>
                       </div>
                     </div>
