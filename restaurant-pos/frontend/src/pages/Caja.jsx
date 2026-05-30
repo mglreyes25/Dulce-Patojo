@@ -30,7 +30,12 @@ import {
   Receipt,
   Printer,
   Download,
+  Phone,
+  MapPin,
+  Clock3,
+  Navigation,
 } from 'lucide-react';
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 import API from '../utils/api';
 
@@ -123,6 +128,11 @@ export default function Caja() {
   const [montoRecibido, setMontoRecibido] = useState('');
   const [propina, setPropina] = useState(0);
   const [procesandoPago, setProcesandoPago] = useState(false);
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [horaRecogida, setHoraRecogida] = useState('');
+  const [instruccionesEntrega, setInstruccionesEntrega] = useState('');
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [pedidosPorCobrar, setPedidosPorCobrar] = useState([]);
   const [cargandoCobros, setCargandoCobros] = useState(false);
@@ -416,6 +426,10 @@ export default function Caja() {
     setMesaId('');
     setClienteNombre('');
     setNotas('');
+    setTelefono('');
+    setDireccion('');
+    setHoraRecogida('');
+    setInstruccionesEntrega('');
     setModal(MODAL_TIPO);
   };
 
@@ -431,6 +445,13 @@ export default function Caja() {
           nombre: i.nombre,
         }));
 
+      const extras = [];
+      if (telefono) extras.push(`📞 ${telefono}`);
+      if (tipoPedido === 'domicilio' && direccion) extras.push(`📍 ${direccion}`);
+      if (tipoPedido === 'domicilio' && instruccionesEntrega) extras.push(`📝 ${instruccionesEntrega}`);
+      if (tipoPedido === 'para_llevar' && horaRecogida) extras.push(`🕐 Recoger a las ${horaRecogida}`);
+      const notasCompleto = [notas, ...extras].filter(Boolean).join(' | ');
+
       const body = {
         items: carrito.map(i => ({
           id: i.id,
@@ -444,7 +465,7 @@ export default function Caja() {
         tipo: tipoPedido,
         mesa_id: mesaId || null,
         cliente_nombre: clienteNombre || null,
-        notas: notas || null,
+        notas: notasCompleto || null,
       };
       const res = await axios.post(`${API}/pedidos`, body, { headers });
       setPedidoActual(res.data);
@@ -578,6 +599,7 @@ export default function Caja() {
     setMetodoPago('efectivo');
     setPropina(0);
     setMontoRecibido('');
+    setPaypalOrderId(null);
     recargarMesas();
   };
 
@@ -636,6 +658,7 @@ export default function Caja() {
   <div class="footer">
     <p>Tipo: ${tipoLabel[pedido.tipo] || pedido.tipo}</p>
     ${pedido.cliente_nombre ? `<p>Cliente: ${pedido.cliente_nombre}</p>` : ''}
+    ${pedido.notas ? `<p style="font-size:9px;color:#999">${pedido.notas}</p>` : ''}
     ${metodoPago ? `<p>Pago: ${pagoLabel[metodoPago] || metodoPago}</p>` : ''}
     <p>Gracias por tu preferencia!</p>
   </div>
@@ -1049,6 +1072,66 @@ export default function Caja() {
                 placeholder="Notas para cocina..."
               />
 
+              {tipoPedido === 'para_llevar' && (
+                <>
+                  <label className="pos-label">
+                    <Phone size={14} /> Teléfono de contacto
+                  </label>
+                  <input
+                    type="tel"
+                    className="pos-input"
+                    value={telefono}
+                    onChange={e => setTelefono(e.target.value)}
+                    placeholder="Ej: 7777-0000"
+                  />
+                  <label className="pos-label">
+                    <Clock3 size={14} /> Hora estimada de recogida
+                  </label>
+                  <input
+                    type="time"
+                    className="pos-input"
+                    value={horaRecogida}
+                    onChange={e => setHoraRecogida(e.target.value)}
+                    style={{ minHeight: 48 }}
+                  />
+                </>
+              )}
+
+              {tipoPedido === 'domicilio' && (
+                <>
+                  <label className="pos-label">
+                    <MapPin size={14} /> Dirección de entrega
+                  </label>
+                  <input
+                    type="text"
+                    className="pos-input"
+                    value={direccion}
+                    onChange={e => setDireccion(e.target.value)}
+                    placeholder="Ej: Colonia Centro, Calle principal #25"
+                  />
+                  <label className="pos-label">
+                    <Phone size={14} /> Teléfono de contacto
+                  </label>
+                  <input
+                    type="tel"
+                    className="pos-input"
+                    value={telefono}
+                    onChange={e => setTelefono(e.target.value)}
+                    placeholder="Ej: 7777-0000"
+                  />
+                  <label className="pos-label">
+                    <Navigation size={14} /> Instrucciones de entrega
+                  </label>
+                  <textarea
+                    className="pos-textarea"
+                    value={instruccionesEntrega}
+                    onChange={e => setInstruccionesEntrega(e.target.value)}
+                    rows={2}
+                    placeholder="Ej: Casa blanca, portón negro, a la par de la iglesia"
+                  />
+                </>
+              )}
+
               <div className="pos-totals">
                 <div className="pos-totals-row">
                   <span>Subtotal</span>
@@ -1163,6 +1246,74 @@ export default function Caja() {
                 </>
               )}
 
+              {metodoPago === 'billetera_digital' && (
+                <div style={{ marginBottom: 16 }}>
+                  <label className="pos-label">Pago con PayPal</label>
+                  <PayPalScriptProvider
+                    options={{
+                      clientId: 'AZ68L6DKG644ebwXVMUTvSBWvDuPyHjJOOqqBQMR5efPOdaObjp6eBx-xPsopNtFxiWQspcHMDCQ2sw-',
+                      currency: 'USD',
+                    }}
+                  >
+                    <PayPalButtons
+                      key={paypalOrderId || 'initial'}
+                      style={{ layout: 'vertical', shape: 'rect', color: 'gold' }}
+                      disabled={paypalOrderId !== null}
+                      createOrder={(data, actions) => {
+                        const totalStr = (montoPago + propina).toFixed(2);
+                        return actions.order.create({
+                          purchase_units: [{
+                            amount: { value: totalStr, currency_code: 'USD' },
+                            description: `Pedido POS - Total $${totalStr}`,
+                          }],
+                        });
+                      }}
+                      onApprove={async (data, actions) => {
+                        const details = await actions.order.capture();
+                        setPaypalOrderId(details.id);
+                        addToast(`PayPal aprobado (ID: ${details.id.slice(0, 8)}...)`, 'success');
+                        // Procesar pago automáticamente
+                        const totalConPropina = montoPago + propina;
+                        setProcesandoPago(true);
+                        try {
+                          const res = await axios.post(
+                            `${API}/pedidos/${pedidoActual.id}/pagar`,
+                            {
+                              metodo_pago: 'billetera_digital',
+                              monto_recibido: totalConPropina,
+                              propina: propina || 0,
+                              referencia_pago: details.id,
+                            },
+                            { headers }
+                          );
+                          setPedidoActual(res.data.pedido);
+                          setPedidosPorCobrar(prev => prev.filter(p => p.id !== pedidoActual.id));
+                          await recargarMesas();
+                          setModal(MODAL_TICKET);
+                        } catch (err) {
+                          console.error('Error al procesar pago PayPal:', err);
+                          addToast(err.response?.data?.error || 'Error al procesar pago PayPal', 'error');
+                        } finally {
+                          setProcesandoPago(false);
+                        }
+                      }}
+                      onCancel={() => {
+                        addToast('Pago con PayPal cancelado', 'info');
+                      }}
+                      onError={(err) => {
+                        console.error('PayPal error:', err);
+                        addToast('Error al procesar pago con PayPal', 'error');
+                      }}
+                    />
+                  </PayPalScriptProvider>
+                  {paypalOrderId && (
+                    <p style={{ fontSize: 12, color: 'var(--green)', textAlign: 'center', marginTop: 8 }}>
+                      ✅ Pagado — PayPal ID: {paypalOrderId.slice(0, 12)}...
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="pos-actions pos-actions-pay">
                 <button className="pos-btn pos-btn-cancel" onClick={cerrarModal}>
                   Cancelar
@@ -1243,6 +1394,9 @@ export default function Caja() {
                 </p>
                 {pedidoActual.cliente_nombre && (
                   <p>Cliente: {pedidoActual.cliente_nombre}</p>
+                )}
+                {pedidoActual.notas && (
+                  <p style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>{pedidoActual.notas}</p>
                 )}
                 <p>Gracias por tu preferencia!</p>
               </div>

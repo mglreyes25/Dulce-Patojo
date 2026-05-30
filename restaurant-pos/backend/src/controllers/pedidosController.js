@@ -198,8 +198,7 @@ const crearPedido = async (req, res) => {
   if (!items || items.length === 0) {
     return res.status(400).json({ error: 'El pedido debe tener al menos un item' });
   }
-  if (!['para_llevar', 'en_mesa', 'para_recoger'].includes(tipo)) {
-    // 'domicilio' requiere migracion_iva.sql ejecutada en Supabase
+  if (!['para_llevar', 'en_mesa', 'para_recoger', 'domicilio'].includes(tipo)) {
     return res.status(400).json({ error: 'Tipo de pedido inválido' });
   }
   if (tipo === 'en_mesa' && !mesa_id) {
@@ -456,7 +455,7 @@ const cambiarEstadoPedido = async (req, res) => {
 // ── PROCESAR PAGO ──────────────────────────────────────────────
 const procesarPago = async (req, res) => {
   const { id } = req.params;
-  const { metodo_pago: metodo, monto_recibido, propina } = req.body;
+  const { metodo_pago: metodo, monto_recibido, propina, referencia_pago } = req.body;
 
   if (!['efectivo', 'tarjeta', 'qr', 'billetera_digital', 'transferencia'].includes(metodo)) {
     return res.status(400).json({ error: 'Método de pago inválido' });
@@ -488,6 +487,7 @@ const procesarPago = async (req, res) => {
       pedido_id: Number(id),
       metodo, monto_recibido: recibo, cambio,
       total, usuario_id: req.user.id,
+      ...(referencia_pago && { referencia_pago }),
     };
     const pagoCompleto = {
       ...pagoBase,

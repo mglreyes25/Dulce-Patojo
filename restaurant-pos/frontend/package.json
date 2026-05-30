@@ -12,6 +12,7 @@
     "start": "vite"
   },
   "dependencies": {
+    "@paypal/react-paypal-js": "^9.2.0",
     "axios": "^1.16.0",
     "es-toolkit": "^1.47.0",
     "lucide-react": "^0.468.0",

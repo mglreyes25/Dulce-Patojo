@@ -2,7 +2,7 @@ const supabase = require('../config/database');
 const { emitPedidoPagado } = require('../config/socketEmitter');
 
 const registrarPago = async (req, res) => {
-  const { pedido_id, metodo_pago: metodo, monto_recibido, propina } = req.body;
+  const { pedido_id, metodo_pago: metodo, monto_recibido, propina, referencia_pago } = req.body;
 
   if (!pedido_id) {
     return res.status(400).json({ error: 'pedido_id es requerido' });
@@ -36,6 +36,7 @@ const registrarPago = async (req, res) => {
       pedido_id: Number(pedido_id),
       metodo, monto_recibido: recibo, cambio,
       total, usuario_id: req.user.id,
+      ...(referencia_pago && { referencia_pago }),
     };
     const pagoCompleto = {
       ...pagoBase,
