@@ -17,17 +17,19 @@ export function getSocket() {
 }
 
 export function disconnectSocket() {
-  if (sharedSocket && sharedSocket.connected) {
+  const socket = sharedSocket;
+  sharedSocket = null;
+  socketRefCount = 0;
+
+  if (socket && socket.connected) {
     try {
       const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
       if (usuario.id) {
-        sharedSocket.emit('force-logout', { userId: usuario.id });
+        socket.emit('force-logout', { userId: usuario.id });
       }
     } catch {}
-    sharedSocket.disconnect();
+    setTimeout(() => socket.disconnect(), 300);
   }
-  sharedSocket = null;
-  socketRefCount = 0;
 }
 
 export function incRef() { socketRefCount++; }

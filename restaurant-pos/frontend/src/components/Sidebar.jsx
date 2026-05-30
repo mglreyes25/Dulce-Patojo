@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   BarChart3, Users, CakeSlice, Package, Salad, ClipboardList,
   PartyPopper, Coffee, Map, ChefHat, Rocket, TrendingUp, LogOut,
-  Menu, X, Settings,
+  Menu, X, Settings, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import useSocket, { disconnectSocket } from '../hooks/useSocket';
 
@@ -170,14 +170,25 @@ export default function Sidebar({ usuario, activeRoute }) {
       {drawerOpen && (
         <div className="sidebar-overlay" onClick={() => setDrawerOpen(false)}>
           <aside className="sidebar sidebar-drawer" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 8px 0' }}>
-              <button
-                className="hamburger-btn"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Cerrar menú"
-              >
-                <X size={20} />
-              </button>
+            <div className="sidebar-drawer-header">
+              <span className="sidebar-drawer-title">Navegación</span>
+              <div className="sidebar-drawer-actions">
+                <button
+                  className="btn-logout"
+                  onClick={() => { setDrawerOpen(false); handleLogout(); }}
+                  title="Cerrar Sesión"
+                >
+                  <LogOut size={16} />
+                  <span className="btn-logout-label">Salir</span>
+                </button>
+                <button
+                  className="hamburger-btn"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Cerrar menú"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             <SidebarContent
               usuario={usuario} activeRoute={activeRoute}
