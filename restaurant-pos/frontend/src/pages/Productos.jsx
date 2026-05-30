@@ -473,7 +473,7 @@ export default function Productos() {
                   )}
                 </div>
               ) : (
-                <>
+                <div className="table-responsive">
                 <table className="table">
                   <thead>
                     <tr>
@@ -542,7 +542,7 @@ export default function Productos() {
                   </tbody>
                 </table>
                 <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                </>
+                </div>
               )}
             </div>
           </>
@@ -971,28 +971,30 @@ export default function Productos() {
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
                 Sin cambios de precio registrados
               </p>
-            ) : (
-              <table className="table">
-                <thead>
-                  <tr><th>Anterior</th><th>Nuevo</th><th>Usuario</th><th>Fecha</th></tr>
-                </thead>
-                <tbody>
-                  {historial.map(h => (
-                    <tr key={h.id}>
-                      <td style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>
-                        ${Number(h.precio_anterior).toFixed(2)}
-                      </td>
-                      <td style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
-                        ${Number(h.precio_nuevo).toFixed(2)}
-                      </td>
-                      <td>{h.usuarios?.nombre || '—'}</td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                        {new Date(h.creado_en).toLocaleString('es-GT')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              ) : (
+                  <div className="table-responsive">
+                  <table className="table">
+                    <thead>
+                      <tr><th>Anterior</th><th>Nuevo</th><th>Usuario</th><th>Fecha</th></tr>
+                    </thead>
+                    <tbody>
+                      {historial.map(h => (
+                        <tr key={h.id}>
+                          <td style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>
+                            ${Number(h.precio_anterior).toFixed(2)}
+                          </td>
+                          <td style={{ color: 'var(--gold-light)', fontWeight: 600 }}>
+                            ${Number(h.precio_nuevo).toFixed(2)}
+                          </td>
+                          <td>{h.usuarios?.nombre || '—'}</td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
+                            {new Date(h.creado_en).toLocaleString('es-GT')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
             )}
             <button
               className="btn"

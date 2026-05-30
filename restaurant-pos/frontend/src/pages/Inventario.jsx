@@ -377,8 +377,8 @@ export default function Inventario() {
                   <p style={{ color: 'var(--text-dim)', fontSize: 12, margin: '4px 0 0' }}>Los movimientos aparecerán cuando se realicen entradas, salidas o ajustes de stock.</p>
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="table" style={{ minWidth: 0 }}>
+                <div className="table-responsive">
+                  <table className="table">
                     <thead>
                       <tr>
                         <th style={{ paddingLeft: 24 }}>Tipo</th>
